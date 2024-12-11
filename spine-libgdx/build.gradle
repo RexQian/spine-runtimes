@@ -25,6 +25,15 @@ project("spine-libgdx") {
     apply plugin: "maven-publish"
     apply plugin: "signing"
 
+    sourceSets {
+        main {
+            resources {
+                srcDirs = ["src"]  // Add this line to include non-Java files from src directory
+                include "**/*.gwt.xml"  // Add this to specifically include GWT module files
+            }
+        }
+    }
+
     dependencies {
         implementation "com.badlogicgames.gdx:gdx:$libgdxVersion"
     }

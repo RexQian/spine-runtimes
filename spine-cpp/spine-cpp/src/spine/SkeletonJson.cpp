@@ -1175,6 +1175,7 @@ Animation *SkeletonJson::readAnimation(Json *root, SkeletonData *skeletonData) {
 					timeline->setFrame(frame, time, inherit);
 					nextMap = keyMap->_next;
 					if (!nextMap) break;
+					keyMap = nextMap;
 				}
 				timelines.add(timeline);
 			} else {
@@ -1277,7 +1278,7 @@ Animation *SkeletonJson::readAnimation(Json *root, SkeletonData *skeletonData) {
 			mixY = mixY2;
 			mixScaleX = mixScaleX2;
 			mixScaleY = mixScaleY2;
-			mixScaleX = mixScaleX2;
+			mixShearY = mixShearY2;
 			keyMap = nextMap;
 		}
 

@@ -148,13 +148,12 @@ class AnimationState {
 		from.animationLast = from.nextAnimationLast;
 		from.trackLast = from.nextTrackLast;
 
-		// Require mixTime > 0 to ensure the mixing from entry was applied at least once.
-		if (to.mixTime > 0 && to.mixTime >= to.mixDuration) {
-			// Require totalAlpha == 0 to ensure mixing is complete, unless mixDuration == 0 (the transition is a single frame).
+		// The from entry was applied at least once and the mix is complete.
+		if (to.nextTrackLast != -1 && to.mixTime >= to.mixDuration) {
+			// Mixing is complete for all entries before the from entry or the mix is instantaneous.
 			if (from.totalAlpha == 0 || to.mixDuration == 0) {
 				to.mixingFrom = from.mixingFrom;
-				if (from.mixingFrom != null)
-					from.mixingFrom.mixingTo = to;
+				if (from.mixingFrom != null) from.mixingFrom.mixingTo = to;
 				to.interruptAlpha = from.interruptAlpha;
 				queue.end(from);
 			}

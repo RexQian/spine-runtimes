@@ -40,6 +40,7 @@ import com.esotericsoftware.spine.Skeleton;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.AttributeSet;
@@ -180,6 +181,8 @@ public class SpineView extends View implements Choreographer.FrameCallback {
 	private Alignment alignment = Alignment.CENTER;
 	private ContentMode contentMode = ContentMode.FIT;
 
+	private boolean isAttached = false;
+
 	/** Constructs a new {@link SpineView}.
 	 *
 	 * After initialization is complete, the provided {@code SpineController} is invoked as per the {@link SpineController}
@@ -187,6 +190,10 @@ public class SpineView extends View implements Choreographer.FrameCallback {
 	public SpineView (Context context, SpineController controller) {
 		super(context);
 		this.controller = controller;
+		// See https://github.com/EsotericSoftware/spine-runtimes/issues/2638
+		if (Build.VERSION.SDK_INT < 29) {
+			this.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+		}
 	}
 
 	/** Constructs a new {@link SpineView} without providing a {@link SpineController}, which you need to provide using
@@ -201,6 +208,18 @@ public class SpineView extends View implements Choreographer.FrameCallback {
 	public SpineView (Context context, AttributeSet attrs, int defStyle) {
 		super(context, attrs, defStyle);
 		// Set properties by view id
+	}
+
+	@Override
+	protected void onAttachedToWindow () {
+		super.onAttachedToWindow();
+		isAttached = true;
+	}
+
+	@Override
+	protected void onDetachedFromWindow () {
+		super.onDetachedFromWindow();
+		isAttached = false;
 	}
 
 	/** Constructs a new {@link SpineView} from files in your app assets. The {@code atlasFileName} specifies the `.atlas` file to
@@ -402,10 +421,9 @@ public class SpineView extends View implements Choreographer.FrameCallback {
 		controller.setCoordinateTransform(x + offsetX / scaleX, y + offsetY / scaleY, scaleX, scaleY);
 	}
 
-	// Choreographer.FrameCallback
-
 	@Override
 	public void doFrame (long frameTimeNanos) {
+		if (!isAttached) return;
 		if (lastTime != 0) delta = (frameTimeNanos - lastTime) / 1e9f;
 		lastTime = frameTimeNanos;
 		invalidate();
