@@ -1003,7 +1003,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		// to simplify we just assume that the user wants to load the skeleton at scale 1
 		// at the current browser zoom level
 		// this might be problematic for free-scale modes (origin and inside+none)
-		this.currentScaleDpi = window.devicePixelRatio;
+		this.currentScaleDpi = this.overlay.getDPR();
 		// skeleton.scaleX = this.currentScaleDpi;
 		// skeleton.scaleY = this.currentScaleDpi;
 
@@ -2124,7 +2124,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			// I'm not sure about this. With mode origin and fit none:
 			// case 1) If I comment this scale code, the skeleton is never scaled and will be always at the same size and won't change size while zooming
 			// case 2) Otherwise, the skeleton is loaded always at the same size, but changes size while zooming
-			const scale = window.devicePixelRatio;
+			const scale = this.getDPR();
 			skeleton.scaleX = skeleton.scaleX / widget.currentScaleDpi * scale;
 			skeleton.scaleY = skeleton.scaleY / widget.currentScaleDpi * scale;
 			widget.currentScaleDpi = scale;
@@ -2177,8 +2177,8 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 
 	private resize (width: number, height: number) {
 		let canvas = this.canvas;
-		this.canvas.width = Math.round(this.screenToWorldLength(width));
-		this.canvas.height = Math.round(this.screenToWorldLength(height));
+		canvas.width = Math.round(this.screenToWorldLength(width));
+		canvas.height = Math.round(this.screenToWorldLength(height));
 		this.renderer.context.gl.viewport(0, 0, canvas.width, canvas.height);
 		this.renderer.camera.setViewport(canvas.width, canvas.height);
 		this.renderer.camera.update();
@@ -2196,11 +2196,13 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 	private previousDPR = 0;
 	private static readonly WIDTH_INCREMENT = 1.15;
 	private static readonly HEIGHT_INCREMENT = 1.2;
-	private getScreenSize () {
+	private static readonly MAX_CANVAS_WIDTH = 7000;
+	private static readonly MAX_CANVAS_HEIGHT = 7000;
+	private getScreenSize (): { width: number, height: number} {
 		let width = window.innerWidth;
 		let height = window.innerHeight;
 
-		const dpr = window.devicePixelRatio;
+		const dpr = this.getDPR();
 		if (dpr !== this.previousDPR) {
 			this.previousDPR = dpr;
 			this.previousWidth = this.previousWidth === 0 ? width : width * SpineWebComponentOverlay.WIDTH_INCREMENT;
@@ -2210,10 +2212,23 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			if (height > this.previousHeight) this.previousHeight = height * SpineWebComponentOverlay.HEIGHT_INCREMENT;
 		}
 
+		// if the resulting canvas width/height is too high, scale the DPI
+		if (this.previousHeight * (1 + this.overflowTop + this.overflowBottom) * dpr > SpineWebComponentOverlay.MAX_CANVAS_HEIGHT ||
+			this.previousWidth * (1 + this.overflowLeft + this.overflowRight) * dpr > SpineWebComponentOverlay.MAX_CANVAS_WIDTH)
+		{
+			this.scaleDPR += .5;
+			return this.getScreenSize();
+		}
+
 		return {
 			width: this.previousWidth,
 			height: this.previousHeight,
 		}
+	}
+
+	private scaleDPR = 1;
+	public getDPR() {
+		return window.devicePixelRatio / this.scaleDPR;
 	}
 
 	/*
@@ -2231,10 +2246,10 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		this.renderer.camera.worldToScreen(vec, this.worldToScreenLength(this.renderer.camera.viewportWidth), this.worldToScreenLength(this.renderer.camera.viewportHeight));
 	}
 	public screenToWorldLength (length: number) {
-		return length * window.devicePixelRatio;
+		return length * this.getDPR();
 	}
 	public worldToScreenLength (length: number) {
-		return length / window.devicePixelRatio;
+		return length / this.getDPR();
 	}
 }
 
