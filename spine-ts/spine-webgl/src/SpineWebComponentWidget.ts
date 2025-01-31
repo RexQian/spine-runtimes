@@ -227,6 +227,7 @@ interface WidgetPublicProperties {
 
 // Usage of this properties is discouraged because they can be made private in the future
 interface WidgetInternalProperties {
+	pma: boolean
 	currentScaleDpi: number
 	dragging: boolean
 	dragX: number
@@ -732,6 +733,12 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	public dragging = false;
 
 	/**
+	 * If true, the widget has texture with premultiplied alpha
+	 * Do not rely on this properties. It might be made private in the future.
+	 */
+	public pma = false;
+
+	/**
 	 * If true, indicate {@link dispose} has been called and the widget cannot be used anymore
 	 */
 	public disposed = false;
@@ -981,7 +988,9 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 			this.overlay.assetManager.loadTextureAtlasButNoTexturesAsync(atlasPath).then(atlas => this.loadTexturesInPagesAttribute(atlas)),
 		]);
 
-		const atlas = this.overlay.assetManager.require(atlasPath);
+		const atlas = this.overlay.assetManager.require(atlasPath) as TextureAtlas;
+		this.pma = atlas.pages[0]?.pma
+
 		const atlasLoader = new AtlasAttachmentLoader(atlas);
 
 		const skeletonLoader = isBinary ? new SkeletonBinary(atlasLoader) : new SkeletonJson(atlasLoader);
@@ -1703,7 +1712,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			const ref = this.parentElement!.getBoundingClientRect();
 			const tempVector = new Vector3();
 			this.skeletonList.forEach((widget) => {
-				const { skeleton, bounds, mode, debug, offsetX, offsetY, xAxis, yAxis, dragX, dragY, fit, loadingSpinner, onScreen, loading, clip, isDraggable } = widget;
+				const { skeleton, pma, bounds, mode, debug, offsetX, offsetY, xAxis, yAxis, dragX, dragY, fit, loadingSpinner, onScreen, loading, clip, isDraggable } = widget;
 
 				if ((!onScreen && dragX === 0 && dragY === 0)) return;
 				const elementRef = widget.getHTMLElementReference();
@@ -1817,7 +1826,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 					widget.worldX = worldOffsetX;
 					widget.worldY = worldOffsetY;
 
-					renderer.drawSkeleton(skeleton, true, -1, -1, (vertices, size, vertexSize) => {
+					renderer.drawSkeleton(skeleton, pma, -1, -1, (vertices, size, vertexSize) => {
 						for (let i = 0; i < size; i += vertexSize) {
 							vertices[i] = vertices[i] + worldOffsetX;
 							vertices[i + 1] = vertices[i + 1] + worldOffsetY;
