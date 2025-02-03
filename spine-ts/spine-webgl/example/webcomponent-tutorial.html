@@ -1021,7 +1021,56 @@
     /////////////////////
     -->
 
+    <!--
+    /////////////////////
+    // start section //
+    /////////////////////
+    -->
 
+    <div class="section vertical-split">
+
+        <div class="split-top split">
+            <div class="split-left">
+                If you want to embed your assets within the page, you can inline them using their base64 version. Use a stringified json object containing as keys the assets name and as values their base64 version.
+            </div>
+            <div class="split-right">
+                <spine-widget
+                    atlas="inline.atlas"
+                    skeleton="inline.skel"
+                    animation="animation"
+                    raw-data='{
+                        "inline.atlas":"aW5saW5lLnBuZwpzaXplOjE2LDE2CmZpbHRlcjpMaW5lYXIsTGluZWFyCnBtYTp0cnVlCmRvdApib3VuZHM6MCwwLDEsMQo=",
+                        "inline.skel":"/B8S/IqaXgYHNC4yLjM5wkgAAMJIAABCyAAAQsgAAELIAAAAAQRkb3QCBXJvb3QAAAAAAAAAAAAAAAA/gAAAP4AAAAAAAAAAAAAAAAAAAAAABGRvdAAAAAAAAAAAAAAAAABCyAAAQsgAAAAAAAAAAAAAAAAAAAAAAQRkb3QB//////////8BAAAAAAABAAEBACWwfdcAAAAAP4AAAD+AAAA/gAAAP4AAAAAAAQphbmltYXRpb24BAQABAQMAAAAAAP////8/gAAA/wAA/wBAAAAA/////wAAAAAAAAAAAA==",
+                        "inline.png":"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAAXNSR0IB2cksfwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAANQTFRF////p8QbyAAAAApJREFUeJxjZAAAAAQAAiFkrWoAAAAASUVORK5CYII="
+                    }'
+                ></spine-widget>
+            </div>
+        </div>
+
+        <div class="split-bottom">
+            <pre><code id="code-display">
+                <script>escapeHTMLandInject(`
+<spine-widget
+    atlas="assets/inline.atlas"
+    skeleton="assets/inline.skel"
+    animation="animation"
+    raw-data='{
+        "assets/inline.atlas":"aW5saW5lLnBuZwpzaXplOjE2LDE2CmZpbHRlcjpMaW5lYXIsTGluZWFyCnBtYTp0cnVlCmRvdApib3VuZHM6MCwwLDEsMQo=",
+        "assets/inline.skel":"/B8S/IqaXgYHNC4yLjM5wkgAAMJIAABCyAAAQsgAAELIAAAAAQRkb3QCBXJvb3QAAAAAAAAAAAAAAAA/gAAAP4AAAAAAAAAAAAAAAAAAAAAABGRvdAAAAAAAAAAAAAAAAABCyAAAQsgAAAAAAAAAAAAAAAAAAAAAAQRkb3QB//////////8BAAAAAAABAAEBACWwfdcAAAAAP4AAAD+AAAA/gAAAP4AAAAAAAQphbmltYXRpb24BAQABAQMAAAAAAP////8/gAAA/wAA/wBAAAAA/////wAAAAAAAAAAAA==",
+        "assets/inline.png":"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAAXNSR0IB2cksfwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAANQTFRF////p8QbyAAAAApJREFUeJxjZAAAAAQAAiFkrWoAAAAASUVORK5CYII="
+    }'
+></spine-widget>`
+);</script>
+            </code></pre>
+        </div>
+
+    </div>
+
+    <!--
+    /////////////////////
+    // end section //
+    /////////////////////
+    -->
 
     <!--
     /////////////////////

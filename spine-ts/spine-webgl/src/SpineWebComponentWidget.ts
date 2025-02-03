@@ -158,7 +158,7 @@ function castToAnimationsInfo (value: string | null): AnimationsInfo | undefined
 	}, {} as AnimationsInfo);
 }
 
-export type AttributeTypes = "string" | "number" | "boolean" | "array-number" | "array-string" | "fitType" | "modeType" | "offScreenUpdateBehaviourType" | "animationsInfo";
+export type AttributeTypes = "string" | "number" | "boolean" | "array-number" | "array-string" | "object" | "fitType" | "modeType" | "offScreenUpdateBehaviourType" | "animationsInfo";
 
 export type CursorEventTypes = "down" | "up" | "enter" | "leave" | "move" | "drag";
 export type CursorEventTypesInput = Exclude<CursorEventTypes, "enter" | "leave">;
@@ -167,6 +167,7 @@ export type CursorEventTypesInput = Exclude<CursorEventTypes, "enter" | "leave">
 interface WidgetAttributes {
 	atlasPath?: string
 	skeletonPath?: string
+	rawData?: Record<string, string>
 	jsonSkeletonKey?: string
 	scale: number
 	animation?: string
@@ -267,6 +268,12 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	 * Connected to `skeleton` attribute.
 	 */
 	public skeletonPath?: string;
+
+	/**
+	 * Holds the assets in base64 format.
+	 * Connected to `raw-data` attribute.
+	 */
+	public rawData?: Record<string ,string>;
 
 	/**
 	 * The name of the skeleton when the skeleton file is a JSON and contains multiple skeletons.
@@ -763,6 +770,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	static attributesDescription: Record<string, { propertyName: keyof WidgetAttributes, type: AttributeTypes, defaultValue?: any }> = {
 		atlas: { propertyName: "atlasPath", type: "string" },
 		skeleton: { propertyName: "skeletonPath", type: "string" },
+		"raw-data": { propertyName: "rawData", type: "object" },
 		"json-skeleton-key": { propertyName: "jsonSkeletonKey", type: "string" },
 		scale: { propertyName: "scale", type: "number" },
 		animation: { propertyName: "animation", type: "string", defaultValue: undefined },
@@ -972,11 +980,17 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	private async loadSkeleton () {
 		this.loading = true;
 
-		const { atlasPath, skeletonPath, scale, skeletonData: skeletonDataInput } = this;
+		const { atlasPath, skeletonPath, scale, skeletonData: skeletonDataInput, rawData } = this;
 		if (!atlasPath || !skeletonPath) {
 			throw new Error(`Missing atlas path or skeleton path. Assets cannot be loaded: atlas: ${atlasPath}, skeleton: ${skeletonPath}`);
 		}
 		const isBinary = skeletonPath.endsWith(".skel");
+
+		if (rawData) {
+			for (let [key, value] of Object.entries(rawData)) {
+				this.overlay.assetManager.setRawDataURI(key, isBase64(value) ? `data:application/octet-stream;base64,${value}` : value);
+			}
+		}
 
 		// skeleton and atlas txt are loaded immeaditely
 		// textures are loaeded depending on the 'pages' param:
@@ -2320,6 +2334,16 @@ function castArrayString (value: string | null, defaultValue = undefined) {
 	return value.split(",");
 }
 
+function castObject (value: string | null, defaultValue = undefined) {
+	if (value === null) return null;
+	return JSON.parse(value);
+}
+
+const base64RegExp = /^(([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{4}|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==))$/;
+function isBase64(str: string) {
+    return base64RegExp.test(str);
+}
+
 function castValue (type: AttributeTypes, value: string | null, defaultValue?: any) {
 	switch (type) {
 		case "string":
@@ -2332,6 +2356,8 @@ function castValue (type: AttributeTypes, value: string | null, defaultValue?: a
 			return castArrayNumber(value, defaultValue);
 		case "array-string":
 			return castArrayString(value, defaultValue);
+		case "object":
+			return castObject(value, defaultValue);
 		case "fitType":
 			return isFitType(value) ? value : defaultValue;
 		case "modeType":

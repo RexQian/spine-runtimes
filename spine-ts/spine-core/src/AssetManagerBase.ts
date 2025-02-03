@@ -411,18 +411,21 @@ export class Downloader {
 
 	downloadText (url: string, success: (data: string) => void, error: (status: number, responseText: string) => void) {
 		if (this.start(url, success, error)) return;
-		if (this.rawDataUris[url]) {
+
+		const rawDataUri = this.rawDataUris[url];
+		// we assume if a "." is included in a raw data uri, it is used to rewrite an asset URL
+		if (rawDataUri && !rawDataUri.includes(".")) {
 			try {
-				let dataUri = this.rawDataUris[url];
-				this.finish(url, 200, this.dataUriToString(dataUri));
+				this.finish(url, 200, this.dataUriToString(rawDataUri));
 			} catch (e) {
 				this.finish(url, 400, JSON.stringify(e));
 			}
 			return;
 		}
+
 		let request = new XMLHttpRequest();
 		request.overrideMimeType("text/html");
-		request.open("GET", url, true);
+		request.open("GET", rawDataUri ? rawDataUri : url, true);
 		let done = () => {
 			this.finish(url, request.status, request.responseText);
 		};
@@ -439,17 +442,20 @@ export class Downloader {
 
 	downloadBinary (url: string, success: (data: Uint8Array) => void, error: (status: number, responseText: string) => void) {
 		if (this.start(url, success, error)) return;
-		if (this.rawDataUris[url]) {
+
+		const rawDataUri = this.rawDataUris[url];
+		// we assume if a "." is included in a raw data uri, it is used to rewrite an asset URL
+		if (rawDataUri && !rawDataUri.includes(".")) {
 			try {
-				let dataUri = this.rawDataUris[url];
-				this.finish(url, 200, this.dataUriToUint8Array(dataUri));
+				this.finish(url, 200, this.dataUriToUint8Array(rawDataUri));
 			} catch (e) {
 				this.finish(url, 400, JSON.stringify(e));
 			}
 			return;
 		}
+
 		let request = new XMLHttpRequest();
-		request.open("GET", url, true);
+		request.open("GET", rawDataUri ? rawDataUri : url, true);
 		request.responseType = "arraybuffer";
 		let onerror = () => {
 			this.finish(url, request.status, request.response);
