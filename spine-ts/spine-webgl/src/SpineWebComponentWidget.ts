@@ -273,7 +273,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	 * Holds the assets in base64 format.
 	 * Connected to `raw-data` attribute.
 	 */
-	public rawData?: Record<string ,string>;
+	public rawData?: Record<string, string>;
 
 	/**
 	 * The name of the skeleton when the skeleton file is a JSON and contains multiple skeletons.
@@ -559,7 +559,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	 * By default, the function does nothing.
 	 * This is an experimental property and might be removed in the future.
 	 */
-	public cursorBoundsEventCallback = (event: CursorEventTypes, originalEvent?: UIEvent) => {}
+	public cursorBoundsEventCallback = (event: CursorEventTypes, originalEvent?: UIEvent) => { }
 
 	/**
 	 * This methods allows to associate to a Slot a callback. For these slots, if the widget is interactive,
@@ -567,7 +567,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	 * a {@link CursorEventTypes} (for example, it enter or leaves the slot's attachment bounds).
 	 * This is an experimental property and might be removed in the future.
 	 */
-	public addCursorSlotEventCallbacks(slot: Slot, slotFunction: (slot: Slot, event: CursorEventTypes ) => void) {
+	public addCursorSlotEventCallbacks (slot: Slot, slotFunction: (slot: Slot, event: CursorEventTypes) => void) {
 		this.cursorSlotEventCallbacks.set(slot, { slotFunction, inside: false });
 	}
 
@@ -1056,13 +1056,13 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 						animations.forEach(({ animationName, delay, loop, mixDuration }, index) => {
 							let track;
 							if (index === 0) {
-								if (animationName === "#EMPTY#")  {
+								if (animationName === "#EMPTY#") {
 									track = state.setEmptyAnimation(trackIndex, mixDuration);
 								} else {
 									track = state.setAnimation(trackIndex, animationName, loop);
 								}
 							} else {
-								if (animationName === "#EMPTY#")  {
+								if (animationName === "#EMPTY#") {
 									track = state.addEmptyAnimation(trackIndex, mixDuration, delay);
 								} else {
 									track = state.addAnimation(trackIndex, animationName, loop, delay);
@@ -1143,7 +1143,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	}
 
 	private checkBoundsInteraction (type: CursorEventTypesInput, originalEvent?: UIEvent) {
-		if ((type === "down"|| type === "up") && this.cursorInsideBounds) {
+		if ((type === "down" || type === "up") && this.cursorInsideBounds) {
 			this.cursorBoundsEventCallback(type, originalEvent);
 			return;
 		}
@@ -1181,7 +1181,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		return inside(this.pointTemp, this.bounds);
 	}
 
-	private checkSlotInteraction(type: CursorEventTypesInput, originalEvent?: UIEvent) {
+	private checkSlotInteraction (type: CursorEventTypesInput, originalEvent?: UIEvent) {
 		for (let [slot, interactionState] of this.cursorSlotEventCallbacks) {
 			if (!slot.bone.active) continue;
 			let attachment = slot.getAttachment();
@@ -1231,7 +1231,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		}
 	}
 
-	private isPointInPolygon(vertices: NumberArrayLike, hullLength: number, point: number[]) {
+	private isPointInPolygon (vertices: NumberArrayLike, hullLength: number, point: number[]) {
 		const [px, py] = point;
 
 		if (hullLength < 6) {
@@ -1260,7 +1260,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	*/
 
 	public boneFollowerList: Array<{ slot: Slot, bone: Bone, element: HTMLElement, followAttachmentAttach: boolean, followRotation: boolean, followOpacity: boolean, followScale: boolean, hideAttachment: boolean }> = [];
-	public followSlot(slotName: string | Slot, element: HTMLElement, options: { followAttachmentAttach?: boolean, followRotation?: boolean, followOpacity?: boolean, followScale?: boolean, hideAttachment?: boolean } = {}) {
+	public followSlot (slotName: string | Slot, element: HTMLElement, options: { followAttachmentAttach?: boolean, followRotation?: boolean, followOpacity?: boolean, followScale?: boolean, hideAttachment?: boolean } = {}) {
 		const {
 			followAttachmentAttach = false,
 			followRotation = true,
@@ -1284,7 +1284,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		this.boneFollowerList.push({ slot, bone: slot.bone, element, followAttachmentAttach, followRotation, followOpacity, followScale, hideAttachment });
 		this.overlay.slotFollowerElementsHolder.appendChild(element);
 	}
-	public unfollowSlot(element: HTMLElement): HTMLElement | undefined {
+	public unfollowSlot (element: HTMLElement): HTMLElement | undefined {
 		const index = this.boneFollowerList.findIndex(e => e.element === element);
 		if (index > -1) {
 			return this.boneFollowerList.splice(index, 1)[0].element;
@@ -1569,7 +1569,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		this.startRenderingLoop();
 	}
 
-	private hasCssTweakOff() {
+	private hasCssTweakOff () {
 		return this.scrollableTweakOff && getComputedStyle(this.parentElement!).transform === "none";
 	}
 
@@ -1912,7 +1912,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 						element.style.transform = `translate(calc(-50% + ${x.toFixed(2)}px),calc(-50% + ${y.toFixed(2)}px))`
 							+ (followRotation ? ` rotate(${-bone.getWorldRotationX()}deg)` : "")
 							+ (followScale ? ` scale(${bone.getWorldScaleX()}, ${bone.getWorldScaleY()})` : "")
-						;
+							;
 
 						element.style.display = ""
 
@@ -2221,7 +2221,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 	private static readonly HEIGHT_INCREMENT = 1.2;
 	private static readonly MAX_CANVAS_WIDTH = 7000;
 	private static readonly MAX_CANVAS_HEIGHT = 7000;
-	private getScreenSize (): { width: number, height: number} {
+	private getScreenSize (): { width: number, height: number } {
 		let width = window.innerWidth;
 		let height = window.innerHeight;
 
@@ -2237,8 +2237,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 
 		// if the resulting canvas width/height is too high, scale the DPI
 		if (this.previousHeight * (1 + this.overflowTop + this.overflowBottom) * dpr > SpineWebComponentOverlay.MAX_CANVAS_HEIGHT ||
-			this.previousWidth * (1 + this.overflowLeft + this.overflowRight) * dpr > SpineWebComponentOverlay.MAX_CANVAS_WIDTH)
-		{
+			this.previousWidth * (1 + this.overflowLeft + this.overflowRight) * dpr > SpineWebComponentOverlay.MAX_CANVAS_WIDTH) {
 			this.scaleDPR += .5;
 			return this.getScreenSize();
 		}
@@ -2250,7 +2249,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 	}
 
 	private scaleDPR = 1;
-	public getDPR() {
+	public getDPR () {
 		return window.devicePixelRatio / this.scaleDPR;
 	}
 
@@ -2340,8 +2339,8 @@ function castObject (value: string | null, defaultValue = undefined) {
 }
 
 const base64RegExp = /^(([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{4}|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==))$/;
-function isBase64(str: string) {
-    return base64RegExp.test(str);
+function isBase64 (str: string) {
+	return base64RegExp.test(str);
 }
 
 function castValue (type: AttributeTypes, value: string | null, defaultValue?: any) {
