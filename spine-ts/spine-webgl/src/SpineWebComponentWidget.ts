@@ -2078,50 +2078,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 	*/
 
 	private updateCanvasSize () {
-		// resize canvas, if necessary
-		this.resizeCanvas();
-
-		// temporarely remove the div to get the page size without considering the div
-		// this is necessary otherwise if the bigger element in the page is remove and the div
-		// was the second bigger element, now it would be the div to determine the page size
-
-
-		if (!this.scrollable) {
-			this.div?.remove();
-			const { width, height } = this.getPageSize();
-			this.div!.style.width = width + "px";
-			this.div!.style.height = height + "px";
-			this.root.appendChild(this.div!);
-		} else {
-			this.div?.remove();
-
-			if (this.hasCssTweakOff()) {
-				// this case lags if scrolls or position fixed
-				// users should never use tweak off, unless the parent container has already a transform
-				this.div!.style.width = this.parentElement!.clientWidth + "px";
-				this.div!.style.height = this.parentElement!.clientHeight + "px";
-				this.canvas.style.transform = `translate(${-this.overflowLeftSize}px,${-this.overflowTopSize}px)`;
-			} else {
-				this.div!.style.width = this.parentElement!.scrollWidth + "px";
-				this.div!.style.height = this.parentElement!.scrollHeight + "px";
-			}
-
-			this.root.appendChild(this.div!);
-		}
-
-
-	}
-
-	private resizeCanvas () {
-		let width, height;
-		if (!this.scrollable) {
-			const screenSize = this.getScreenSize();
-			width = screenSize.width;
-			height = screenSize.height;
-		} else {
-			width = this.parentElement!.clientWidth;
-			height = this.parentElement!.clientHeight;
-		}
+		const { width, height } = this.getScreenSize();
 
 		if (this.currentCanvasBaseWidth !== width || this.currentCanvasBaseHeight !== height) {
 			this.currentCanvasBaseWidth = width;
@@ -2137,6 +2094,94 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			this.resize(totalWidth, totalHeight);
 		}
 
+		// temporarely remove the div to get the page size without considering the div
+		// this is necessary otherwise if the bigger element in the page is remove and the div
+		// was the second bigger element, now it would be the div to determine the page size
+		this.div?.remove();
+		if (!this.scrollable) {
+			const { width, height } = this.getPageSize();
+			this.div!.style.width = width + "px";
+			this.div!.style.height = height + "px";
+		} else {
+			if (this.hasCssTweakOff()) {
+				// this case lags if scrolls or position fixed
+				// users should never use tweak off, unless the parent container has already a transform
+				this.div!.style.width = this.parentElement!.clientWidth + "px";
+				this.div!.style.height = this.parentElement!.clientHeight + "px";
+				this.canvas.style.transform = `translate(${-this.overflowLeftSize}px,${-this.overflowTopSize}px)`;
+			} else {
+				this.div!.style.width = this.parentElement!.scrollWidth + "px";
+				this.div!.style.height = this.parentElement!.scrollHeight + "px";
+			}
+		}
+		this.root.appendChild(this.div!);
+	}
+
+	private resize (width: number, height: number) {
+		let canvas = this.canvas;
+		canvas.width = Math.round(this.screenToWorldLength(width));
+		canvas.height = Math.round(this.screenToWorldLength(height));
+		this.renderer.context.gl.viewport(0, 0, canvas.width, canvas.height);
+		this.renderer.camera.setViewport(canvas.width, canvas.height);
+		this.renderer.camera.update();
+	}
+
+	// we need the bounding client rect otherwise decimals won't be returned
+	// this means that during zoom it might occurs that the div would be resized
+	// rounded 1px more making a scrollbar appear
+	private getPageSize () {
+		return document.body.getBoundingClientRect();
+	}
+
+	private previousWidth = 0;
+	private previousHeight = 0;
+	private previousDPR = 0;
+	private static readonly WIDTH_INCREMENT = 1.15;
+	private static readonly HEIGHT_INCREMENT = 1.2;
+	private static readonly MAX_CANVAS_WIDTH = 7000;
+	private static readonly MAX_CANVAS_HEIGHT = 7000;
+	private getScreenSize (): { width: number, height: number } {
+		if (this.scrollable) {
+			return {
+				width: this.parentElement!.clientWidth,
+				height: this.parentElement!.clientHeight,
+			}
+		}
+
+		let width = window.innerWidth;
+		let height = window.innerHeight;
+
+		const dpr = this.getDPR();
+		if (dpr !== this.previousDPR) {
+			this.previousDPR = dpr;
+			this.previousWidth = this.previousWidth === 0 ? width : width * SpineWebComponentOverlay.WIDTH_INCREMENT;
+			this.previousHeight = height * SpineWebComponentOverlay.HEIGHT_INCREMENT;
+
+			this.scaleSkeletonDPR();
+		} else {
+			if (width > this.previousWidth) this.previousWidth = width * SpineWebComponentOverlay.WIDTH_INCREMENT;
+			if (height > this.previousHeight) this.previousHeight = height * SpineWebComponentOverlay.HEIGHT_INCREMENT;
+		}
+
+		// if the resulting canvas width/height is too high, scale the DPI
+		if (this.previousHeight * (1 + this.overflowTop + this.overflowBottom) * dpr > SpineWebComponentOverlay.MAX_CANVAS_HEIGHT ||
+			this.previousWidth * (1 + this.overflowLeft + this.overflowRight) * dpr > SpineWebComponentOverlay.MAX_CANVAS_WIDTH) {
+			this.scaleDPR += .5;
+			return this.getScreenSize();
+		}
+
+		return {
+			width: this.previousWidth,
+			height: this.previousHeight,
+		}
+	}
+
+	private scaleDPR = 1;
+	public getDPR () {
+		return window.devicePixelRatio / this.scaleDPR;
+	}
+
+	private scaleSkeletonDPR() {
 		this.skeletonList.forEach((widget) => {
 			// inside mode scale automatically to fit the skeleton within its parent
 			if (widget.mode !== "origin" && widget.fit !== "none") return;
@@ -2151,9 +2196,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			skeleton.scaleX = skeleton.scaleX / widget.currentScaleDpi * scale;
 			skeleton.scaleY = skeleton.scaleY / widget.currentScaleDpi * scale;
 			widget.currentScaleDpi = scale;
-
 		});
-
 	}
 
 	private translateCanvas () {
@@ -2196,61 +2239,6 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		}
 
 		this.canvas.style.transform = `translate(${scrollPositionX}px,${scrollPositionY}px)`;
-	}
-
-	private resize (width: number, height: number) {
-		let canvas = this.canvas;
-		canvas.width = Math.round(this.screenToWorldLength(width));
-		canvas.height = Math.round(this.screenToWorldLength(height));
-		this.renderer.context.gl.viewport(0, 0, canvas.width, canvas.height);
-		this.renderer.camera.setViewport(canvas.width, canvas.height);
-		this.renderer.camera.update();
-	}
-
-	// we need the bounding client rect otherwise decimals won't be returned
-	// this means that during zoom it might occurs that the div would be resized
-	// rounded 1px more making a scrollbar appear
-	private getPageSize () {
-		return document.body.getBoundingClientRect();
-	}
-
-	private previousWidth = 0;
-	private previousHeight = 0;
-	private previousDPR = 0;
-	private static readonly WIDTH_INCREMENT = 1.15;
-	private static readonly HEIGHT_INCREMENT = 1.2;
-	private static readonly MAX_CANVAS_WIDTH = 7000;
-	private static readonly MAX_CANVAS_HEIGHT = 7000;
-	private getScreenSize (): { width: number, height: number } {
-		let width = window.innerWidth;
-		let height = window.innerHeight;
-
-		const dpr = this.getDPR();
-		if (dpr !== this.previousDPR) {
-			this.previousDPR = dpr;
-			this.previousWidth = this.previousWidth === 0 ? width : width * SpineWebComponentOverlay.WIDTH_INCREMENT;
-			this.previousHeight = height * SpineWebComponentOverlay.HEIGHT_INCREMENT;
-		} else {
-			if (width > this.previousWidth) this.previousWidth = width * SpineWebComponentOverlay.WIDTH_INCREMENT;
-			if (height > this.previousHeight) this.previousHeight = height * SpineWebComponentOverlay.HEIGHT_INCREMENT;
-		}
-
-		// if the resulting canvas width/height is too high, scale the DPI
-		if (this.previousHeight * (1 + this.overflowTop + this.overflowBottom) * dpr > SpineWebComponentOverlay.MAX_CANVAS_HEIGHT ||
-			this.previousWidth * (1 + this.overflowLeft + this.overflowRight) * dpr > SpineWebComponentOverlay.MAX_CANVAS_WIDTH) {
-			this.scaleDPR += .5;
-			return this.getScreenSize();
-		}
-
-		return {
-			width: this.previousWidth,
-			height: this.previousHeight,
-		}
-	}
-
-	private scaleDPR = 1;
-	public getDPR () {
-		return window.devicePixelRatio / this.scaleDPR;
 	}
 
 	/*
