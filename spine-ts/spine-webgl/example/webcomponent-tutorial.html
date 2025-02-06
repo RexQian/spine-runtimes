@@ -2782,15 +2782,15 @@ const updateControl = (widget, controlBone, mouseX, mouseY, tempVector) => {
 function createCircleOfDivs(numDivs = 8) {
     const container = document.createElement('div');
     container.style.position = 'relative';
-    container.style.width = '400px';
-    container.style.height = '400px';
+    container.style.width = '350px';
+    container.style.height = '350px';
     container.style.backgroundColor = '#f3f4f6';
     container.style.borderRadius = '50%';
     container.style.display = 'flex';
     container.style.justifyContent = 'center';
     container.style.alignItems = 'center';
 
-    const radius = 150;
+    const radius = 140;
 
     for (let i = 0; i < numDivs; i++) {
         const angle = (i / numDivs) * 2 * Math.PI;
@@ -2799,8 +2799,8 @@ function createCircleOfDivs(numDivs = 8) {
 
         const div = document.createElement('div');
         div.style.position = 'absolute';
-        div.style.width = '100px';
-        div.style.height = '100px';
+        div.style.width = '90px';
+        div.style.height = '90px';
         div.style.backgroundColor = '#3b82f6';
         div.style.borderRadius = '8px';
         div.style.display = 'flex';
@@ -3185,7 +3185,6 @@ const darkPicker = document.getElementById("dark-picker");
 
     <div class="section vertical-split">
 
-        <div class="split-top split">
             <div class="split-left">
                 A login UI made using the chibi stickers and a button made using Spine.
                 <p>
@@ -3211,7 +3210,7 @@ const darkPicker = document.getElementById("dark-picker");
 
 
             <span id="ruler" style="visibility: hidden; white-space: nowrap; position: absolute"></span>
-            <div style="background-color: white; width: 350px; padding: 30px; text-align: center;">
+            <div style="background-color: white; width: 250px; padding: 30px; text-align: center;">
                 <div style="display: flex; justify-content: center;">
                     <div style="width: 150px; height:150px; border-radius: 5%; border: 1px solid rgb(113, 113, 113); background-color: rgb(211, 211, 211); margin-bottom: 30px;">
                         <spine-widget
@@ -3413,7 +3412,6 @@ const darkPicker = document.getElementById("dark-picker");
 
             </script>
 
-        </div>
 
         <div class="split-bottom">
             <pre><code id="code-display">
