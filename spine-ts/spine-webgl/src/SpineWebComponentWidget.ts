@@ -1189,7 +1189,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 				if (inside) {
 					slotFunction(slot, type, originalEvent);
 				}
-				return;
+				continue;
 			}
 
 			let vertices = this.verticesTemp;
@@ -1213,7 +1213,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 					slotFunction(slot, "enter", originalEvent);
 				}
 
-				slotFunction(slot, type);
+				slotFunction(slot, type, originalEvent);
 
 			} else {
 
