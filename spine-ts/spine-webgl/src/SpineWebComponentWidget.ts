@@ -858,8 +858,8 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 
 	disconnectedCallback (): void {
 		window.removeEventListener("DOMContentLoaded", this.DOMContentLoadedHandler);
-		const index = this.overlay!.skeletonList.indexOf(this);
-		if (index !== -1) {
+		const index = this.overlay?.skeletonList.indexOf(this);
+		if (index > 0) {
 			this.overlay!.skeletonList.splice(index, 1);
 		}
 	}
