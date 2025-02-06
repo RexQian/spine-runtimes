@@ -1143,11 +1143,6 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	}
 
 	private checkBoundsInteraction (type: CursorEventTypesInput, originalEvent?: UIEvent) {
-		if ((type === "down" || type === "up") && this.cursorInsideBounds) {
-			this.cursorBoundsEventCallback(type, originalEvent);
-			return;
-		}
-
 		if (this.checkCursorInsideBounds()) {
 
 			if (!this.cursorInsideBounds) {
@@ -2001,7 +1996,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		let prevX = 0;
 		let prevY = 0;
 		inputManager.addListener({
-			// moved is used to pass curson position wrt to canvas and widget position and currently is EXPERIMENTAL
+			// moved is used to pass cursor position wrt to canvas and widget position and currently is EXPERIMENTAL
 			moved: (x, y, ev) => {
 				const input = getInput(ev);
 				this.cursorUpdate(input);

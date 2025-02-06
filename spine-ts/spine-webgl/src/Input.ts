@@ -38,6 +38,11 @@ export class Input implements Disposable {
 	initialPinchDistance = 0;
 	private listeners = new Array<InputListener>();
 	private autoPreventDefault: boolean;
+
+	// this is needed because browsers sends mousedown-mousemove-mousesup after a touch sequence, unless touch end preventDefault
+	// but preventing default will result in preventing interaction with the page.
+	private isTouch = false;
+
 	private callbacks: {
 		mouseDown: (ev: UIEvent) => void;
 		mouseMove: (ev: UIEvent) => void;
@@ -56,7 +61,7 @@ export class Input implements Disposable {
 
 	private setupCallbacks (element: HTMLElement) {
 		const mouseDown = (ev: UIEvent) => {
-			if (ev instanceof MouseEvent) {
+			if (ev instanceof MouseEvent && !this.isTouch) {
 				let rect = element.getBoundingClientRect();
 				this.mouseX = ev.clientX - rect.left;
 				this.mouseY = ev.clientY - rect.top;
@@ -66,7 +71,7 @@ export class Input implements Disposable {
 		}
 
 		const mouseMove = (ev: UIEvent) => {
-			if (ev instanceof MouseEvent) {
+			if (ev instanceof MouseEvent && !this.isTouch) {
 				let rect = element.getBoundingClientRect();
 				this.mouseX = ev.clientX - rect.left;
 				this.mouseY = ev.clientY - rect.top;
@@ -82,7 +87,7 @@ export class Input implements Disposable {
 		};
 
 		const mouseUp = (ev: UIEvent) => {
-			if (ev instanceof MouseEvent) {
+			if (ev instanceof MouseEvent && !this.isTouch) {
 				let rect = element.getBoundingClientRect();
 				this.mouseX = ev.clientX - rect.left;;
 				this.mouseY = ev.clientY - rect.top;
@@ -100,6 +105,7 @@ export class Input implements Disposable {
 		};
 
 		const touchStart = (ev: TouchEvent) => {
+			this.isTouch = true;
 			if (!this.touch0 || !this.touch1) {
 				var touches = ev.changedTouches;
 				let nativeTouch = touches.item(0);
@@ -127,6 +133,7 @@ export class Input implements Disposable {
 		}
 
 		const touchMove = (ev: TouchEvent) => {
+			this.isTouch = true;
 			if (this.touch0) {
 				var touches = ev.changedTouches;
 				let rect = element.getBoundingClientRect();
@@ -156,6 +163,7 @@ export class Input implements Disposable {
 		}
 
 		const touchEnd = (ev: TouchEvent) => {
+			this.isTouch = true;
 			if (this.touch0) {
 				var touches = ev.changedTouches;
 				let rect = element.getBoundingClientRect();
