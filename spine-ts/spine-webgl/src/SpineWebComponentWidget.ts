@@ -1277,7 +1277,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 		element.style.display = 'none';
 
 		this.boneFollowerList.push({ slot, bone: slot.bone, element, followAttachmentAttach, followRotation, followOpacity, followScale, hideAttachment });
-		this.overlay.slotFollowerElementsHolder.appendChild(element);
+		this.overlay.addSlotFollowerElement(element);
 	}
 	public unfollowSlot (element: HTMLElement): HTMLElement | undefined {
 		const index = this.boneFollowerList.findIndex(e => e.element === element);
@@ -1443,7 +1443,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 	private root: ShadowRoot;
 
 	private div: HTMLDivElement;
-	public slotFollowerElementsHolder: HTMLDivElement;
+	private slotFollowerElementsHolder: HTMLDivElement;
 	private canvas: HTMLCanvasElement;
 	private fps: HTMLSpanElement;
 	private fpsAppended = false;
@@ -1649,6 +1649,11 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 				this.parentElement!.appendChild(this);
 			}
 		}
+	}
+
+	addSlotFollowerElement (element: HTMLElement) {
+		this.slotFollowerElementsHolder.appendChild(element);
+		this.resizeCallback();
 	}
 
 	private tempFollowBoneVector = new Vector3();
@@ -2092,7 +2097,10 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		// temporarely remove the div to get the page size without considering the div
 		// this is necessary otherwise if the bigger element in the page is remove and the div
 		// was the second bigger element, now it would be the div to determine the page size
-		this.div?.remove();
+		// this.div?.remove(); is it better width/height to zero?
+		// this.div!.style.width = 0 + "px";
+		// this.div!.style.height = 0 + "px";
+		this.div!.style.display = "none";
 		if (!this.scrollable) {
 			const { width, height } = this.getPageSize();
 			this.div!.style.width = width + "px";
@@ -2109,7 +2117,8 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 				this.div!.style.height = this.parentElement!.scrollHeight + "px";
 			}
 		}
-		this.root.appendChild(this.div!);
+		this.div!.style.display = "";
+		// this.root.appendChild(this.div!);
 	}
 
 	private resize (width: number, height: number) {
