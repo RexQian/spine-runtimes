@@ -2185,7 +2185,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		return window.devicePixelRatio / this.scaleDPR;
 	}
 
-	private scaleSkeletonDPR() {
+	private scaleSkeletonDPR () {
 		this.skeletonList.forEach((widget) => {
 			// inside mode scale automatically to fit the skeleton within its parent
 			if (widget.mode !== "origin" && widget.fit !== "none") return;
