@@ -1961,8 +1961,8 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 		this.cursorCanvasX = input.x - window.scrollX;
 		this.cursorCanvasY = input.y - window.scrollY;
 
-		const ref = this.parentElement!.getBoundingClientRect();
 		if (this.scrollable) {
+			const ref = this.parentElement!.getBoundingClientRect();
 			this.cursorCanvasX -= ref.left;
 			this.cursorCanvasY -= ref.top;
 		}
