@@ -1570,7 +1570,7 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 
 	private running = false;
 	disconnectedCallback (): void {
-		const id = this.getAttribute('id');
+		const id = this.getAttribute('overlay-id');
 		if (id) SpineWebComponentOverlay.OVERLAY_LIST.delete(id);
 		// window.removeEventListener("scroll", this.scrollHandler);
 		window.removeEventListener("load", this.onLoadCallback);
