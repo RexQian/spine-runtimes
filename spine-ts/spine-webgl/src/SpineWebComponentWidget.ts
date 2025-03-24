@@ -833,7 +833,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 			this.initAfterConnect();
 		} else {
 			window.addEventListener("DOMContentLoaded", this.DOMContentLoadedHandler);
-			if (document.readyState !== "loading") {
+			if (document.readyState === "complete") {
 				this.DOMContentLoadedHandler();
 			}
 		}
