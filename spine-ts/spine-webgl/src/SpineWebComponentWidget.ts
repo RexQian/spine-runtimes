@@ -1723,7 +1723,9 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			let renderer = this.renderer;
 			renderer.begin();
 
-			const ref = this.parentElement!.getBoundingClientRect();
+			let ref: DOMRect;
+			if (this.scrollable) ref = this.parentElement!.getBoundingClientRect();
+
 			const tempVector = new Vector3();
 			this.skeletonList.forEach((widget) => {
 				const { skeleton, pma, bounds, mode, debug, offsetX, offsetY, xAxis, yAxis, dragX, dragY, fit, loadingSpinner, onScreen, loading, clip, isDraggable } = widget;
