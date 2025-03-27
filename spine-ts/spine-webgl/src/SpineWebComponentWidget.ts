@@ -1724,7 +1724,14 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 			renderer.begin();
 
 			let ref: DOMRect;
-			if (this.scrollable) ref = this.parentElement!.getBoundingClientRect();
+			let offsetLeftForOevrlay = 0;
+			let offsetTopForOverlay = 0;
+			if (this.scrollable) {
+				ref = this.parentElement!.getBoundingClientRect();
+				const computedStyle = getComputedStyle(this.parentElement!);
+				offsetLeftForOevrlay = ref.left + parseFloat(computedStyle.borderLeftWidth);
+				offsetTopForOverlay = ref.top + parseFloat(computedStyle.borderTopWidth);
+			}
 
 			const tempVector = new Vector3();
 			this.skeletonList.forEach((widget) => {
@@ -1738,8 +1745,8 @@ class SpineWebComponentOverlay extends HTMLElement implements OverlayAttributes,
 				divBounds.y = divBounds.top + this.overflowTopSize;
 
 				if (this.scrollable) {
-					divBounds.x -= ref.left;
-					divBounds.y -= ref.top;
+					divBounds.x -= offsetLeftForOevrlay;
+					divBounds.y -= offsetTopForOverlay;
 				}
 
 				const { padLeft, padRight, padTop, padBottom } = widget
