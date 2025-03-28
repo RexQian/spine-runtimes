@@ -561,6 +561,7 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 	 */
 	public cursorBoundsEventCallback = (event: CursorEventTypes, originalEvent?: UIEvent) => { }
 
+	// TODO: probably it makes sense to associate a single callback to a groups of slots to avoid the same callback to be called for each slot of the group
 	/**
 	 * This methods allows to associate to a Slot a callback. For these slots, if the widget is interactive,
 	 * when the cursor performs actions within the slot's attachment the associated callback is invoked with
@@ -1185,13 +1186,6 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 
 			const { slotFunction, inside } = interactionState
 
-			if (type === "down" || type === "up") {
-				if (inside) {
-					slotFunction(slot, type, originalEvent);
-				}
-				continue;
-			}
-
 			let vertices = this.verticesTemp;
 			let hullLength = 8;
 
@@ -1211,6 +1205,13 @@ export class SpineWebComponentWidget extends HTMLElement implements Disposable, 
 				if (!inside) {
 					interactionState.inside = true;
 					slotFunction(slot, "enter", originalEvent);
+				}
+
+				if (type === "down" || type === "up") {
+					if (interactionState.inside) {
+						slotFunction(slot, type, originalEvent);
+					}
+					continue;
 				}
 
 				slotFunction(slot, type, originalEvent);
