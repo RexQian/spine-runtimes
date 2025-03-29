@@ -301,7 +301,7 @@ module spine {
 		private animationButton: HTMLElement;
 
 		private context: spine.webgl.ManagedWebGLRenderingContext;
-		private loadingScreen: spine.webgl.LoadingScreen;
+		// private loadingScreen: spine.webgl.LoadingScreen;
 		private assetManager: spine.webgl.AssetManager;
 
 		// Whether the skeleton was loaded
@@ -324,6 +324,7 @@ module spine {
 		private parent: HTMLElement;
 
 		private stopRequestAnimationFrame = false;
+		private cameraController: spine.webgl.CameraController;
 
 		constructor(parent: HTMLElement | string, private config: SpinePlayerConfig) {
 			if (typeof parent === "string") this.parent = document.getElementById(parent);
@@ -424,7 +425,7 @@ module spine {
 				this.context = new spine.webgl.ManagedWebGLRenderingContext(this.canvas, webglConfig);
 				// Setup the scene renderer and loading screen
 				this.sceneRenderer = new spine.webgl.SceneRenderer(this.canvas, this.context, true);
-				this.loadingScreen = new spine.webgl.LoadingScreen(this.sceneRenderer);
+				// this.loadingScreen = new spine.webgl.LoadingScreen(this.sceneRenderer);
 			} catch (e) {
 				this.showError("Sorry, your browser does not support WebGL.<br><br>Please use the latest version of Firefox, Chrome, Edge, or Safari.");
 				return dom;
@@ -734,8 +735,8 @@ module spine {
 			gl.clear(gl.COLOR_BUFFER_BIT);
 
 			// Display loading screen
-			this.loadingScreen.backgroundColor.setFromColor(bg);
-			this.loadingScreen.draw(this.assetManager.isLoadingComplete());
+			// this.loadingScreen.backgroundColor.setFromColor(bg);
+			// this.loadingScreen.draw(this.assetManager.isLoadingComplete());
 
 			// Have we finished loading the asset? Then set things up
 			if (this.assetManager.isLoadingComplete() && this.skeleton == null) this.loadSkeleton();
@@ -788,12 +789,6 @@ module spine {
 					}
 				}
 
-				let viewportSize = this.scale(viewport.width, viewport.height, this.canvas.width, this.canvas.height);
-
-				this.sceneRenderer.camera.zoom = viewport.width / viewportSize.x;
-				this.sceneRenderer.camera.position.x = viewport.x + viewport.width / 2;
-				this.sceneRenderer.camera.position.y = viewport.y + viewport.height / 2;
-
 				this.sceneRenderer.begin();
 
 				// Draw background image if given
@@ -839,8 +834,6 @@ module spine {
 				}
 
 				this.sceneRenderer.end();
-
-				this.sceneRenderer.camera.zoom = 0;
 			}
 		}
 
@@ -995,114 +988,7 @@ module spine {
 
 		private cancelId = 0;
 		setupInput () {
-			let controlBones = this.config.controlBones;
-			let selectedBones = this.selectedBones = new Array<Bone>(this.config.controlBones.length);
-			let canvas = this.canvas;
-			let input = new spine.webgl.Input(canvas);
-			var target:Bone = null;
-			let coords = new spine.webgl.Vector3();
-			let temp = new spine.webgl.Vector3();
-			let temp2 = new spine.Vector2();
-			let skeleton = this.skeleton
-			let renderer = this.sceneRenderer;
-			input.addListener({
-				down: (x, y) => {
-					for (var i = 0; i < controlBones.length; i++) {
-						var bone = skeleton.findBone(controlBones[i]);
-						if (!bone) continue;
-						renderer.camera.screenToWorld(coords.set(x, y, 0), canvas.width, canvas.height);
-						if (temp.set(skeleton.x + bone.worldX, skeleton.y + bone.worldY, 0).distance(coords) < 30) {
-							target = bone;
-						}
-					}
-				},
-				up: (x, y) => {
-					if (target) {
-						target = null;
-					} else {
-						if (!this.config.showControls) return;
-						if (this.paused)
-							this.play()
-						else
-							this.pause();
-					}
-				},
-				dragged: (x, y) => {
-					if (target != null) {
-						renderer.camera.screenToWorld(coords.set(x, y, 0), canvas.width, canvas.height);
-						if (target.parent !== null) {
-							target.parent.worldToLocal(temp2.set(coords.x - skeleton.x, coords.y - skeleton.y));
-							target.x = temp2.x;
-							target.y = temp2.y;
-						} else {
-							target.x = coords.x - skeleton.x;
-							target.y = coords.y - skeleton.y;
-						}
-					}
-				},
-				moved: (x, y) => {
-					for (var i = 0; i < controlBones.length; i++) {
-						var bone = skeleton.findBone(controlBones[i]);
-						if (!bone) continue;
-						renderer.camera.screenToWorld(coords.set(x, y, 0), canvas.width, canvas.height);
-						if (temp.set(skeleton.x + bone.worldX, skeleton.y + bone.worldY, 0).distance(coords) < 30) {
-							selectedBones[i] = bone;
-						} else {
-							selectedBones[i] = null;
-						}
-					}
-				}
-			});
-
-			// For the manual hover to work, we need to disable
-			// hidding the controls if the mouse/touch entered
-			// the clickable area of a child of the controls.
-			// For this we need to register a mouse handler on
-			// the document and see if we are within the canvas
-			// area :/
-			var mouseOverControls = true;
-			var mouseOverCanvas = false;
-			document.addEventListener("mousemove", (ev: UIEvent) => {
-				if (ev instanceof MouseEvent) {
-					handleHover(ev.clientX, ev.clientY);
-				}
-			});
-			document.addEventListener("touchmove", (ev: UIEvent) => {
-				if (ev instanceof TouchEvent) {
-					var touches = ev.changedTouches;
-					if (touches.length > 0) {
-						var touch = touches[0];
-						handleHover(touch.clientX, touch.clientY);
-					}
-				}
-			});
-
-			let handleHover = (mouseX: number, mouseY: number) => {
-				if (!this.config.showControls) return;
-
-				let popup = findWithClass(this.dom, "spine-player-popup");
-				mouseOverControls = overlap(mouseX, mouseY, this.playerControls.getBoundingClientRect());
-				mouseOverCanvas = overlap(mouseX, mouseY, this.canvas.getBoundingClientRect());
-				clearTimeout(this.cancelId);
-				let hide = popup.length == 0 && !mouseOverControls && !mouseOverCanvas && !this.paused;
-				if (hide) {
-					this.playerControls.classList.add("spine-player-controls-hidden");
-				} else {
-					this.playerControls.classList.remove("spine-player-controls-hidden");
-				}
-				if (!mouseOverControls && popup.length == 0 && !this.paused) {
-					let remove = () => {
-						if (!this.paused) this.playerControls.classList.add("spine-player-controls-hidden");
-					};
-					this.cancelId = setTimeout(remove, 1000);
-				}
-			}
-
-			let overlap = (mouseX: number, mouseY: number, rect: DOMRect | ClientRect): boolean => {
-					let x = mouseX - rect.left;
-					let y = mouseY - rect.top;
-					return x >= 0 && x <= rect.width && y >= 0 && y <= rect.height;
-			}
+			this.cameraController = new spine.webgl.CameraController(this.canvas, this.sceneRenderer.camera);
 		}
 
 		private play () {

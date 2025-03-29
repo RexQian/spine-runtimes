@@ -47,6 +47,7 @@ module spine.webgl {
 		constructor (viewportWidth: number, viewportHeight: number) {
 			this.viewportWidth = viewportWidth;
 			this.viewportHeight = viewportHeight;
+			this.position.set(0, viewportHeight * 2, 0);
 			this.update();
 		}
 

@@ -34,6 +34,7 @@ module spine.webgl {
 		lastY = 0;
 		buttonDown = false;
 		currTouch: Touch = null;
+		initialDistance = 0;
 		touchesPool = new Pool<spine.webgl.Touch>(() => {
 			return new spine.webgl.Touch(0, 0, 0);
 		});
@@ -202,6 +203,39 @@ module spine.webgl {
 						break;
 					}
 				}
+
+				// 处理多点触控缩放
+				if (ev.touches.length === 2) {
+					const touch1 = ev.touches[0];
+					const touch2 = ev.touches[1];
+					const dx = touch2.clientX - touch1.clientX;
+					const dy = touch2.clientY - touch1.clientY;
+					const currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+					if (this.initialDistance === 0) {
+						this.initialDistance = currentDistance;
+					} else {
+						let listeners = this.listeners;
+						for (let i = 0; i < listeners.length; i++) {
+							if (listeners[i].zoom) listeners[i].zoom(this.initialDistance, currentDistance);
+						}
+					}
+				} else {
+					this.initialDistance = 0;
+				}
+
+				ev.preventDefault();
+			}, false);
+
+			element.addEventListener("wheel", (ev: WheelEvent) => {
+				let delta = ev.deltaY;
+				if (ev.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+					delta *= 40;
+				}
+				let listeners = this.listeners;
+				for (let i = 0; i < listeners.length; i++) {
+					if (listeners[i].wheel) listeners[i].wheel(delta);
+				}
 				ev.preventDefault();
 			}, false);
 		}
@@ -228,5 +262,7 @@ module spine.webgl {
 		up(x: number, y: number): void;
 		moved(x: number, y: number): void;
 		dragged(x: number, y: number): void;
+		wheel?(delta: number): void;
+		zoom?(initialDistance: number, distance: number): void;
 	}
 }
