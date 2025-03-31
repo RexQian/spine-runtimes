@@ -47,6 +47,9 @@ module spine {
 				let line = reader.readLine();
 				if (line == null)
 					break;
+				if (line.endsWith('.sct')) {
+					line = line.replace('.sct', '.png')
+				}
 				line = line.trim();
 				if (line.length == 0)
 					page = null;

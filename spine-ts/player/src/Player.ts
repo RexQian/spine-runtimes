@@ -988,6 +988,55 @@ module spine {
 
 		private cancelId = 0;
 		setupInput () {
+			// For the manual hover to work, we need to disable
+			// hidding the controls if the mouse/touch entered
+			// the clickable area of a child of the controls.
+			// For this we need to register a mouse handler on
+			// the document and see if we are within the canvas
+			// area :/
+			var mouseOverControls = true;
+			var mouseOverCanvas = false;
+			document.addEventListener("mousemove", (ev: UIEvent) => {
+				if (ev instanceof MouseEvent) {
+					handleHover(ev.clientX, ev.clientY);
+				}
+			});
+			document.addEventListener("touchmove", (ev: UIEvent) => {
+				if (ev instanceof TouchEvent) {
+					var touches = ev.changedTouches;
+					if (touches.length > 0) {
+						var touch = touches[0];
+						handleHover(touch.clientX, touch.clientY);
+					}
+				}
+			});
+
+			let handleHover = (mouseX: number, mouseY: number) => {
+				if (!this.config.showControls) return;
+
+				let popup = findWithClass(this.dom, "spine-player-popup");
+				mouseOverControls = overlap(mouseX, mouseY, this.playerControls.getBoundingClientRect());
+				mouseOverCanvas = overlap(mouseX, mouseY, this.canvas.getBoundingClientRect());
+				clearTimeout(this.cancelId);
+				let hide = popup.length == 0 && !mouseOverControls && !mouseOverCanvas && !this.paused;
+				if (hide) {
+					this.playerControls.classList.add("spine-player-controls-hidden");
+				} else {
+					this.playerControls.classList.remove("spine-player-controls-hidden");
+				}
+				if (!mouseOverControls && popup.length == 0 && !this.paused) {
+					let remove = () => {
+						if (!this.paused) this.playerControls.classList.add("spine-player-controls-hidden");
+					};
+					this.cancelId = setTimeout(remove, 1000);
+				}
+			}
+
+			let overlap = (mouseX: number, mouseY: number, rect: DOMRect | ClientRect): boolean => {
+					let x = mouseX - rect.left;
+					let y = mouseY - rect.top;
+					return x >= 0 && x <= rect.width && y >= 0 && y <= rect.height;
+			}
 			this.cameraController = new spine.webgl.CameraController(this.canvas, this.sceneRenderer.camera);
 		}
 
