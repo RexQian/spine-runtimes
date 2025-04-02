@@ -76,6 +76,9 @@ module spine {
 		/* Optional: whether to show the player controls. Default: true. */
 		showControls: boolean
 
+		/* Optional: whether to show the debug information. Default: false. */
+		showDebug: boolean
+
 		/* Optional: which debugging visualizations should be one. Default: none. */
 		debug: {
 			bones: boolean
@@ -299,7 +302,7 @@ module spine {
 		private playButton: HTMLElement;
 		private skinButton: HTMLElement;
 		private animationButton: HTMLElement;
-
+		private settingsButton: HTMLElement;
 		private context: spine.webgl.ManagedWebGLRenderingContext;
 		// private loadingScreen: spine.webgl.LoadingScreen;
 		private assetManager: spine.webgl.AssetManager;
@@ -458,8 +461,11 @@ module spine {
 			this.animationButton = findWithId(dom, "spine-player-button-animation")[0];
 			this.skinButton = findWithId(dom, "spine-player-button-skin")[0];
 			let settingsButton = findWithId(dom, "spine-player-button-settings")[0];
+			this.settingsButton = settingsButton;
 			let fullscreenButton = findWithId(dom, "spine-player-button-fullscreen")[0];
 			let logoButton = findWithId(dom, "spine-player-button-logo")[0];
+			// hide logo button
+			logoButton.classList.add("spine-player-hidden");
 
 			this.playButton.onclick = () => {
 				if (this.paused) this.play()
@@ -981,6 +987,10 @@ module spine {
 			// Hide skin and animation if there's only the default skin / no animation
 			if (skeletonData.skins.length == 1 || (this.config.skins && this.config.skins.length == 1)) this.skinButton.classList.add("spine-player-hidden");
 			if (skeletonData.animations.length == 1 || (this.config.animations && this.config.animations.length == 1)) this.animationButton.classList.add("spine-player-hidden");
+
+			if (!this.config.showDebug) {
+				this.settingsButton.classList.add("spine-player-hidden");
+			}
 
 			this.config.success(this);
 			this.loaded = true;
