@@ -329,6 +329,9 @@ module spine {
 		private stopRequestAnimationFrame = false;
 		private cameraController: spine.webgl.CameraController;
 
+		private doScreenshot = false;
+		private snapshotName = "";
+
 		constructor(parent: HTMLElement | string, private config: SpinePlayerConfig) {
 			if (typeof parent === "string") this.parent = document.getElementById(parent);
 			else this.parent = parent;
@@ -381,6 +384,49 @@ module spine {
 				config.defaultMix = 0.25;
 
 			return config;
+		}
+
+		setBackgroundColor(color: string) {
+			this.config.backgroundColor = color;
+		}
+
+		setSkinByName(skinName: string) {
+			this.config.skin = skinName;
+			this.skeleton.setSkinByName(this.config.skin);
+			this.skeleton.setSlotsToSetupPose();
+		}
+	
+		skins() {
+			return this.skeleton.data.skins.map((skin) => skin.name);
+		}
+	
+		currentSkin() {
+			if (!this.skeleton.skin) return null;
+			return this.skeleton.skin.name;
+		}
+	
+		animations() {
+			return this.skeleton.data.animations.map((animation) => animation.name);
+		}
+	
+		currentAnimation() {
+			return this.config.animation;
+		}
+	
+		resume() {
+			this.play();
+		}
+	
+		isPaused() {
+			return this.pause
+		}
+	
+		setSpeed(speed: number) {
+			this.speed = speed
+		}
+	
+		currentSpeed() {
+			return this.speed;
 		}
 
 		showError(error: string) {
@@ -840,6 +886,18 @@ module spine {
 				}
 
 				this.sceneRenderer.end();
+
+				if (this.doScreenshot) {
+					this.doScreenshot = false;
+					const animation = this.currentAnimation() || "bind";
+					const skin = this.currentSkin() || "default";
+					const d = document.createElement("a");
+					d.setAttribute("download", this.snapshotName + "_" + animation + "_" + skin);
+					d.href = this.canvas.toDataURL();
+					document.body.appendChild(d);
+					d.click();
+					document.body.removeChild(d);
+				}
 			}
 		}
 
@@ -1073,6 +1131,11 @@ module spine {
 
 			this.playButton.classList.remove("spine-player-button-icon-pause");
 			this.playButton.classList.add("spine-player-button-icon-play");
+		}
+
+		public captureScreenshot(name: string) {
+			this.doScreenshot = true;
+			this.snapshotName = name;
 		}
 
 		public setAnimation (animation: string, loop: boolean = true) {
