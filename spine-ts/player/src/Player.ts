@@ -331,7 +331,7 @@ module spine {
 
 		private doScreenshot = false;
 		private snapshotName = "";
-
+		private screenshotCallback: (dataUrl: string, filename: string) => void;
 		constructor(parent: HTMLElement | string, private config: SpinePlayerConfig) {
 			if (typeof parent === "string") this.parent = document.getElementById(parent);
 			else this.parent = parent;
@@ -891,12 +891,16 @@ module spine {
 					this.doScreenshot = false;
 					const animation = this.currentAnimation() || "bind";
 					const skin = this.currentSkin() || "default";
-					const d = document.createElement("a");
-					d.setAttribute("download", this.snapshotName + "_" + animation + "_" + skin);
-					d.href = this.canvas.toDataURL();
-					document.body.appendChild(d);
-					d.click();
-					document.body.removeChild(d);
+					if (this.screenshotCallback) {
+						this.screenshotCallback(this.canvas.toDataURL(), this.snapshotName + "_" + animation + "_" + skin);
+					} else {
+						const d = document.createElement("a");
+						d.setAttribute("download", this.snapshotName + "_" + animation + "_" + skin);
+						d.href = this.canvas.toDataURL();
+						document.body.appendChild(d);
+						d.click();
+						document.body.removeChild(d);
+					}
 				}
 			}
 		}
@@ -1126,16 +1130,40 @@ module spine {
 
 		private pause () {
 			this.paused = true;
-			this.playerControls.classList.remove("spine-player-controls-hidden");
+			if (this.config.showControls) {
+				this.playerControls.classList.remove("spine-player-controls-hidden");
+				this.playButton.classList.remove("spine-player-button-icon-pause");
+				this.playButton.classList.add("spine-player-button-icon-play");
+			}
 			clearTimeout(this.cancelId);
-
-			this.playButton.classList.remove("spine-player-button-icon-pause");
-			this.playButton.classList.add("spine-player-button-icon-play");
 		}
 
-		public captureScreenshot(name: string) {
+		public captureScreenshot(name: string, callback: (dataUrl: string, filename: string) => void) {
 			this.doScreenshot = true;
 			this.snapshotName = name;
+			this.screenshotCallback = callback;
+		}
+
+		public setDPI(dpi: number) {
+			this.sceneRenderer.camera.dpi = dpi;
+		}
+
+		public getDPI() {
+			return this.sceneRenderer.camera.dpi;
+		}
+
+		public dispose() {
+			this.stopRequestAnimationFrame = true;
+			if (this.sceneRenderer) {
+				this.sceneRenderer.dispose();
+			}
+			if (this.assetManager) {
+				this.assetManager.dispose();
+			}
+		}
+
+		public getCanvas() {
+			return this.canvas;
 		}
 
 		public setAnimation (animation: string, loop: boolean = true) {

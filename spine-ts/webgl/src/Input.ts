@@ -229,12 +229,11 @@ module spine.webgl {
 
 			element.addEventListener("wheel", (ev: WheelEvent) => {
 				let delta = ev.deltaY;
-				if (ev.deltaMode === WheelEvent.DOM_DELTA_LINE) {
-					delta *= 40;
-				}
+				let deltaMode = ev.deltaMode;
+				
 				let listeners = this.listeners;
 				for (let i = 0; i < listeners.length; i++) {
-					if (listeners[i].wheel) listeners[i].wheel(delta);
+					if (listeners[i].wheel) listeners[i].wheel(delta, deltaMode);
 				}
 				ev.preventDefault();
 			}, false);
@@ -262,7 +261,7 @@ module spine.webgl {
 		up(x: number, y: number): void;
 		moved(x: number, y: number): void;
 		dragged(x: number, y: number): void;
-		wheel?(delta: number): void;
-		zoom?(initialDistance: number, distance: number): void;
+		wheel?(delta: number, deltaMode?: number): void;
+		zoom?(initialDistance: number, distance: number, deltaMode?: number): void;
 	}
 }

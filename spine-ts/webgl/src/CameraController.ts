@@ -41,11 +41,6 @@ module spine.webgl {
 		private cameraY = 0;
 		private mouseX = 0;
 		private mouseY = 0;
-		private currentZoomVelocity = 0;
-		private zoomAcceleration = 0.2;
-		private zoomDamping = 0.85;
-		private maxZoomVelocity = 0.5;
-		private animationFrameId: number | null = null;
 
 		constructor (public canvas: HTMLElement, public camera: OrthoCamera) {
 			new Input(canvas).addListener({
@@ -76,14 +71,43 @@ module spine.webgl {
 					this.lastX = x;
 					this.lastY = y;
 				},
-				wheel: (delta: number) => {
-					const limitedDelta = Math.max(Math.min(delta, 1), -1);
-					this.currentZoomVelocity += limitedDelta * this.zoomSpeed * this.zoomAcceleration;
+				wheel: (delta: number, deltaMode?: number) => {
+					// 处理不同浏览器的滚轮事件差异
+					let scaledDelta: number;
+					const zoomFactor = 0.1;
 					
-					this.currentZoomVelocity = Math.max(Math.min(this.currentZoomVelocity, this.maxZoomVelocity), -this.maxZoomVelocity);
+					// 根据deltaMode调整缩放程度
+					if (deltaMode === WheelEvent.DOM_DELTA_LINE) {
+						// DOM_DELTA_LINE模式，通常每次滚动是3行
+						scaledDelta = delta < 0 ? zoomFactor : -zoomFactor;
+					} else {
+						// DOM_DELTA_PIXEL模式，根据滚动像素计算平滑缩放
+						scaledDelta = delta < 0 ? 
+							Math.min(zoomFactor, Math.abs(delta) * 0.0005) : 
+							Math.max(-zoomFactor, delta * -0.0005);
+					}
 					
-					if (this.animationFrameId === null) {
-						this.animateZoom();
+					// 直接计算新的缩放值
+					const newZoom = this.camera.zoom + scaledDelta;
+					
+					// 应用缩放，确保在最小和最大缩放范围内
+					if (newZoom >= this.minZoom && newZoom <= this.maxZoom) {
+						const mouseX = this.lastX;
+						const mouseY = this.lastY;
+						
+						// 计算缩放前鼠标位置在世界坐标中的位置
+						const oldDistance = this.camera.screenToWorld(new Vector3(mouseX, mouseY), this.canvas.clientWidth, this.canvas.clientHeight);
+						
+						// 更新缩放值
+						this.camera.zoom = newZoom;
+						this.camera.update();
+						
+						// 计算缩放后鼠标位置在世界坐标中的位置
+						const newDistance = this.camera.screenToWorld(new Vector3(mouseX, mouseY), this.canvas.clientWidth, this.canvas.clientHeight);
+						
+						// 调整相机位置，确保鼠标下的点保持不变
+						this.camera.position.add(oldDistance.sub(newDistance));
+						this.camera.update();
 					}
 				},
 				zoom: (initialDistance: number, distance: number) => {
@@ -103,33 +127,6 @@ module spine.webgl {
 					this.lastY = y;
 				},
 			});
-		}
-
-		private animateZoom = () => {
-			this.currentZoomVelocity *= this.zoomDamping;
-			
-			if (Math.abs(this.currentZoomVelocity) < 0.001) {
-				this.currentZoomVelocity = 0;
-				this.animationFrameId = null;
-				return;
-			}
-
-			const newZoom = this.camera.zoom + this.currentZoomVelocity;
-			
-			if (newZoom >= this.minZoom && newZoom <= this.maxZoom) {
-				const mouseX = this.lastX;
-				const mouseY = this.lastY;
-				
-				const oldDistance = this.camera.screenToWorld(new Vector3(mouseX, mouseY), this.canvas.clientWidth, this.canvas.clientHeight);
-				this.camera.zoom = newZoom;
-				this.camera.update();
-				
-				const newDistance = this.camera.screenToWorld(new Vector3(mouseX, mouseY), this.canvas.clientWidth, this.canvas.clientHeight);
-				this.camera.position.add(oldDistance.sub(newDistance));
-				this.camera.update();
-			}
-
-			this.animationFrameId = requestAnimationFrame(this.animateZoom);
 		}
 	}
 }

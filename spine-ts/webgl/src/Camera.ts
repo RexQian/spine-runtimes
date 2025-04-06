@@ -41,6 +41,7 @@ module spine.webgl {
 		inverseProjectionView = new Matrix4();
 		projection = new Matrix4();
 		view = new Matrix4();
+		dpi = 2;
 
 		private tmp = new Vector3();
 
@@ -56,7 +57,7 @@ module spine.webgl {
 			let view = this.view;
 			let projectionView = this.projectionView;
 			let inverseProjectionView = this.inverseProjectionView;
-			let zoom = this.zoom, viewportWidth = this.viewportWidth, viewportHeight = this.viewportHeight;
+			let zoom = this.zoom / this.dpi, viewportWidth = this.viewportWidth, viewportHeight = this.viewportHeight;
 			projection.ortho(zoom * (-viewportWidth / 2), zoom * (viewportWidth / 2),
 							 zoom * (-viewportHeight / 2), zoom * (viewportHeight / 2),
 							 this.near, this.far);
