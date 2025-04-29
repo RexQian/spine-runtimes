@@ -135,6 +135,9 @@ module spine {
 
 		/* Optional: callback when the widget could not be loaded. */
 		error: (widget: SpinePlayer, msg: string) => void
+
+		/* Optional: maximum frames per second. Default: 60. */
+		maxFPS?: number
 	}
 
 	class Popup {
@@ -222,7 +225,7 @@ module spine {
 		private knob: HTMLElement;
 		public change: (percentage: number) => void;
 
-		constructor(public snaps = 0, public snapPercentage = 0.1, public big = false) { }
+		constructor(public snaps = 0, public snapPercentage = 0.1, public big = false) {	 }
 
 		render(): HTMLElement {
 			this.slider = createElement(/*html*/`
@@ -304,7 +307,6 @@ module spine {
 		private animationButton: HTMLElement;
 		private settingsButton: HTMLElement;
 		private context: spine.webgl.ManagedWebGLRenderingContext;
-		// private loadingScreen: spine.webgl.LoadingScreen;
 		private assetManager: spine.webgl.AssetManager;
 
 		// Whether the skeleton was loaded
@@ -332,6 +334,13 @@ module spine {
 		private doScreenshot = false;
 		private snapshotName = "";
 		private screenshotCallback: (dataUrl: string, filename: string) => void;
+		
+		// 帧率控制相关属性
+		private lastFrameTime = 0;
+		private frameCount = 0;
+		private lastFPSUpdateTime = 0;
+		private currentFPS = 0;
+
 		constructor(parent: HTMLElement | string, private config: SpinePlayerConfig) {
 			if (typeof parent === "string") this.parent = document.getElementById(parent);
 			else this.parent = parent;
@@ -366,6 +375,7 @@ module spine {
 			if (typeof config.debug.points === "undefined") config.debug.points = false;
 			if (typeof config.debug.regions === "undefined") config.debug.regions = false;
 			if (typeof config.debug.meshes === "undefined") config.debug.meshes = false;
+			if (typeof config.maxFPS === "undefined") config.maxFPS = 60;
 
 			if (config.animations && config.animation) {
 				if (config.animations.indexOf(config.animation) < 0) throw new Error("Default animation '" + config.animation + "' is not contained in the list of selectable animations " + escapeHtml(JSON.stringify(this.config.animations)) + ".");
@@ -775,7 +785,26 @@ module spine {
 		}
 
 		drawFrame (requestNextFrame = true) {
-			if (requestNextFrame && !this.stopRequestAnimationFrame) requestAnimationFrame(() => this.drawFrame());
+			if (requestNextFrame && !this.stopRequestAnimationFrame) {
+				requestAnimationFrame(() => this.drawFrame());
+			}
+
+			// 帧率控制
+			const now = performance.now();
+			const minFrameTime = 1000 / this.config.maxFPS;
+			if (now - this.lastFrameTime < minFrameTime) {
+				return; // 跳过本帧
+			}
+			this.lastFrameTime = now;
+
+			// 计算实际FPS
+			this.frameCount++;
+			if (now - this.lastFPSUpdateTime >= 1000) {
+				this.currentFPS = this.frameCount;
+				this.frameCount = 0;
+				this.lastFPSUpdateTime = now;
+			}
+
 			let ctx = this.context;
 			let gl = ctx.gl;
 
