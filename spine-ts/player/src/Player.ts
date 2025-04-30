@@ -788,6 +788,9 @@ module spine {
 			if (requestNextFrame && !this.stopRequestAnimationFrame) {
 				requestAnimationFrame(() => this.drawFrame());
 			}
+			if (this.stopRequestAnimationFrame) {
+				return;
+			}
 
 			// 帧率控制
 			const now = performance.now();
