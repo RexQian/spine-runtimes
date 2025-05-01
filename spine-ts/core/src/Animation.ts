@@ -232,6 +232,21 @@ module spine {
 			}
 		}
 
+		/** Sets the specified key frame to Bezier interpolation. `points` is an array of 9 numbers **/
+		setCurvePoints(frameIndex: number, points: ArrayLike<number>) {
+			if (points.length != CurveTimeline.BEZIER_SIZE - 1) {
+				console.log("points.length != CurveTimeline.BEZIER_SIZE - 1", points.length, CurveTimeline.BEZIER_SIZE - 1);
+				return;
+			}
+			let i = frameIndex * CurveTimeline.BEZIER_SIZE;
+			let curves = this.curves;
+			curves[i++] = CurveTimeline.BEZIER;
+
+			for (let j = 0; j < CurveTimeline.BEZIER_SIZE - 1; j++) {
+				curves[i + j] = points[j];
+			}
+		}
+
 		/** Returns the interpolated percentage for the specified key frame and linear percentage. */
 		getCurvePercent (frameIndex: number, percent: number) {
 			percent = MathUtils.clamp(percent, 0, 1);

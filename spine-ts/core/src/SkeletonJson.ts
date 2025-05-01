@@ -787,9 +787,11 @@ module spine {
 
 		readCurve (map: any, timeline: CurveTimeline, frameIndex: number) {
 			if (!map.hasOwnProperty("curve")) return;
-			if (map.curve == "stepped")
+			if (map.curve == "stepped") {
 				timeline.setStepped(frameIndex);
-			else {
+			} else if (Array.isArray(map.curve)) {
+				timeline.setCurvePoints(frameIndex, map.curve);
+			} else {
 				let curve: number = map.curve;
 				timeline.setCurve(frameIndex, curve, this.getValue(map, "c2", 0), this.getValue(map, "c3", 1), this.getValue(map, "c4", 1));
 			}
