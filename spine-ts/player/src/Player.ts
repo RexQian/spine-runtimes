@@ -428,6 +428,11 @@ module spine {
 			return this.speed;
 		}
 
+		duration() {
+			let animation = this.skeleton.data.findAnimation(this.config.animation)
+			return animation != null ? animation.duration : 0
+		}
+
 		showError(error: string) {
 			let errorDom = findWithClass(this.dom, "spine-player-error")[0];
 			errorDom.classList.remove("spine-player-hidden");
@@ -1172,6 +1177,7 @@ module spine {
 		}
 
 		public setAnimation (animation: string, loop: boolean = true) {
+			this.config.animation = animation;
 			// Determine viewport
 			this.previousViewport = this.currentViewport;
 			let animViewport = this.calculateAnimationViewport(animation);
