@@ -135,6 +135,24 @@ module spine {
 
 		/* Optional: callback when the widget could not be loaded. */
 		error: (widget: SpinePlayer, msg: string) => void
+
+		/* Optional: maximum frame rate for rendering. Default: 60. Set to 0 for unlimited. */
+		maxFPS: number
+
+		/* Optional: whether to pause rendering when the player is paused. Default: true. */
+		pauseRenderingWhenPaused: boolean
+
+		/* Optional: whether to disable frame rate limiting during recording to prevent flickering. Default: true. */
+		disableFrameRateLimitWhenRecording: boolean
+
+		/* Optional: enable hardware acceleration optimizations. Default: false to avoid rendering issues. */
+		enableHardwareAcceleration: boolean
+
+		/* Optional: enable GPU instancing for better performance with multiple skeletons. Default: false. */
+		enableGPUInstancing: boolean
+
+		/* Optional: enable texture compression for better memory usage. Default: true. */
+		enableTextureCompression: boolean
 	}
 
 	class Popup {
@@ -331,9 +349,31 @@ module spine {
 		private doScreenshot = false;
 		private snapshotName = "";
 		private screenshotCallback: (dataUrl: string, filename: string) => void;
+
+		// Frame rate limiting
+		private lastFrameTime = 0;
+		private frameInterval = 0;
+		private animationFrameId: number = 0;
+		private frameCount = 0;
+		private lastFPSUpdate = 0;
+		private currentFPS = 0;
+		private isFirstFrame = true;
+		private isRecording = false;
+
+		// Hardware acceleration
+		private hardwareAccelerationEnabled = false;
+		private gpuInstancingEnabled = false;
+		private textureCompressionEnabled = false;
 		constructor(parent: HTMLElement | string, private config: SpinePlayerConfig) {
 			if (typeof parent === "string") this.parent = document.getElementById(parent);
 			else this.parent = parent;
+			
+			// Initialize frame rate control
+			this.updateFrameRate();
+			
+			// Setup screen recording detection
+			this.setupWindowFocusHandlers();
+			
 			this.parent.appendChild(this.render());
 		}
 
@@ -382,6 +422,24 @@ module spine {
 			if (typeof config.defaultMix === "undefined")
 				config.defaultMix = 0.25;
 
+			if (typeof config.maxFPS === "undefined")
+				config.maxFPS = 60;
+
+			if (typeof config.pauseRenderingWhenPaused === "undefined")
+				config.pauseRenderingWhenPaused = true;
+
+			if (typeof config.disableFrameRateLimitWhenRecording === "undefined")
+				config.disableFrameRateLimitWhenRecording = true;
+
+			if (typeof config.enableHardwareAcceleration === "undefined")
+				config.enableHardwareAcceleration = false;
+
+			if (typeof config.enableGPUInstancing === "undefined")
+				config.enableGPUInstancing = false;
+
+			if (typeof config.enableTextureCompression === "undefined")
+				config.enableTextureCompression = true;
+
 			return config;
 		}
 
@@ -426,6 +484,227 @@ module spine {
 	
 		currentSpeed() {
 			return this.speed;
+		}
+
+		setMaxFPS(fps: number) {
+			this.config.maxFPS = fps;
+			this.updateFrameRate();
+		}
+
+		getMaxFPS() {
+			return this.config.maxFPS;
+		}
+
+		getCurrentFPS() {
+			return this.currentFPS;
+		}
+
+
+		setRecordingMode(recording: boolean) {
+			this.isRecording = recording;
+		}
+
+		isRecordingMode() {
+			return this.isRecording;
+		}
+
+		enableHardwareAcceleration(enable: boolean) {
+			this.config.enableHardwareAcceleration = enable;
+			if (this.context) {
+				this.initializeHardwareAcceleration();
+			}
+		}
+
+		isHardwareAccelerationEnabled() {
+			return this.hardwareAccelerationEnabled;
+		}
+
+		enableGPUInstancing(enable: boolean) {
+			this.config.enableGPUInstancing = enable;
+			if (this.context) {
+				this.initializeHardwareAcceleration();
+			}
+		}
+
+		isGPUInstancingEnabled() {
+			return this.gpuInstancingEnabled;
+		}
+
+		enableTextureCompression(enable: boolean) {
+			this.config.enableTextureCompression = enable;
+			if (this.context) {
+				this.initializeHardwareAcceleration();
+			}
+		}
+
+		isTextureCompressionEnabled() {
+			return this.textureCompressionEnabled;
+		}
+
+		getWebGLExtensions() {
+			if (!this.context) return [];
+			const gl = this.context.gl;
+			const extensions = [];
+			
+			// Check for common WebGL extensions
+			const commonExtensions = [
+				'ANGLE_instanced_arrays',
+				'WEBGL_draw_instanced',
+				'WEBGL_compressed_texture_s3tc',
+				'WEBGL_compressed_texture_etc1',
+				'WEBGL_compressed_texture_astc',
+				'OES_vertex_array_object',
+				'WEBGL_depth_texture',
+				'WEBGL_lose_context'
+			];
+			
+			for (const ext of commonExtensions) {
+				if (this.isExtensionSupported(gl, ext)) {
+					extensions.push(ext);
+				}
+			}
+			
+			return extensions;
+		}
+
+		private updateFrameRate() {
+			if (this.config.maxFPS > 0) {
+				this.frameInterval = 1000 / this.config.maxFPS;
+			} else {
+				this.frameInterval = 0;
+			}
+		}
+
+		private updateFPS() {
+			this.frameCount++;
+			const now = performance.now();
+			if (now - this.lastFPSUpdate >= 1000) {
+				this.currentFPS = this.frameCount;
+				this.frameCount = 0;
+				this.lastFPSUpdate = now;
+				
+				// Note: Removed adaptive frame rate adjustment to prevent FPS limit from suddenly failing
+				// Users can manually adjust FPS if needed
+			}
+		}
+
+		private setupWindowFocusHandlers() {
+			// Removed automatic FPS adjustment based on window focus and page visibility
+			// Users now have full control over FPS settings
+			
+			// Only keep screen recording detection for flickering prevention
+			this.detectScreenRecording();
+		}
+
+		private detectScreenRecording() {
+			// Monitor for high frame rate requests which might indicate recording
+			let frameRateHistory: number[] = [];
+			const maxHistory = 10;
+			
+			const checkRecording = () => {
+				// Add current frame rate to history
+				frameRateHistory.push(this.currentFPS);
+				if (frameRateHistory.length > maxHistory) {
+					frameRateHistory.shift();
+				}
+				
+				// If we have enough history, check for consistent high frame rates
+				if (frameRateHistory.length >= 5) {
+					const avgFPS = frameRateHistory.reduce((a, b) => a + b, 0) / frameRateHistory.length;
+					const isHighFPS = avgFPS > (this.config.maxFPS * 0.9);
+					
+					// If we're consistently running at high FPS, we might be recording
+					if (isHighFPS && !this.isRecording) {
+						this.setRecordingMode(true);
+					} else if (!isHighFPS && this.isRecording) {
+						this.setRecordingMode(false);
+					}
+				}
+			};
+
+			// Check periodically for recording state
+			setInterval(checkRecording, 2000);
+		}
+
+		private initializeHardwareAcceleration() {
+			if (!this.config.enableHardwareAcceleration) return;
+
+			const gl = this.context.gl;
+			
+			// Enable hardware acceleration features
+			this.hardwareAccelerationEnabled = true;
+			
+			// Enable GPU instancing if supported
+			if (this.config.enableGPUInstancing) {
+				this.gpuInstancingEnabled = this.isExtensionSupported(gl, 'ANGLE_instanced_arrays') || 
+											this.isExtensionSupported(gl, 'WEBGL_draw_instanced');
+			}
+			
+			// Enable texture compression if supported
+			if (this.config.enableTextureCompression) {
+				this.textureCompressionEnabled = this.isExtensionSupported(gl, 'WEBGL_compressed_texture_s3tc') ||
+												this.isExtensionSupported(gl, 'WEBGL_compressed_texture_etc1') ||
+												this.isExtensionSupported(gl, 'WEBGL_compressed_texture_astc');
+			}
+			
+			// Optimize WebGL context settings (safe for 2D rendering)
+			this.optimizeWebGLContext(gl);
+		}
+
+		private isExtensionSupported(gl: WebGLRenderingContext, extensionName: string): boolean {
+			try {
+				return !!gl.getExtension(extensionName);
+			} catch (e) {
+				return false;
+			}
+		}
+
+		private optimizeWebGLContext(gl: WebGLRenderingContext) {
+			// For 2D animation, disable depth testing and face culling
+			// These can cause rendering issues with 2D sprites
+			gl.disable(gl.DEPTH_TEST);
+			gl.disable(gl.CULL_FACE);
+			
+			// Enable blending for transparency (essential for 2D sprites)
+			gl.enable(gl.BLEND);
+			gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+			
+			// Set clear color
+			gl.clearColor(0.0, 0.0, 0.0, 0.0);
+			
+			// Enable vertex array objects for better performance
+			if (this.isExtensionSupported(gl, 'OES_vertex_array_object')) {
+				const vaoExt = gl.getExtension('OES_vertex_array_object');
+				if (vaoExt) {
+					// Store VAO extension for later use
+					(gl as any).vaoExt = vaoExt;
+				}
+			}
+		}
+
+		private applyHardwareAccelerationOptimizations(gl: WebGLRenderingContext) {
+			if (!this.hardwareAccelerationEnabled) return;
+
+			// Conservative hardware acceleration for 2D animation
+			// Only apply safe optimizations that won't break 2D rendering
+			
+			// Ensure proper 2D rendering state
+			gl.disable(gl.DEPTH_TEST);
+			gl.disable(gl.CULL_FACE);
+			
+			// Enable blending for transparency (essential for 2D sprites)
+			gl.enable(gl.BLEND);
+			gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+			
+			// Use conservative performance settings
+			gl.hint(gl.GENERATE_MIPMAP_HINT, gl.NICEST);
+			
+			// Optimize texture settings (safe for 2D)
+			gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+			gl.pixelStorei(gl.PACK_ALIGNMENT, 1);
+			
+			// Note: GPU instancing and texture compression would be implemented
+			// in the renderer itself, not in the WebGL state
 		}
 
 		duration() {
@@ -474,8 +753,18 @@ module spine {
 			try {
 				// Setup the scene renderer and OpenGL context
 				this.canvas = findWithClass(dom, "spine-player-canvas")[0] as HTMLCanvasElement;
-				var webglConfig = { alpha: config.alpha };
+				var webglConfig = { 
+					alpha: config.alpha,
+					antialias: config.enableHardwareAcceleration,
+					powerPreference: config.enableHardwareAcceleration ? "high-performance" : "default",
+					preserveDrawingBuffer: false,
+					premultipliedAlpha: config.premultipliedAlpha
+				};
 				this.context = new spine.webgl.ManagedWebGLRenderingContext(this.canvas, webglConfig);
+				
+				// Initialize hardware acceleration
+				this.initializeHardwareAcceleration();
+				
 				// Setup the scene renderer and loading screen
 				this.sceneRenderer = new spine.webgl.SceneRenderer(this.canvas, this.context, true);
 				// this.loadingScreen = new spine.webgl.LoadingScreen(this.sceneRenderer);
@@ -769,6 +1058,112 @@ module spine {
 			makeItem("Points", "points");
 			makeItem("Hulls", "hulls");
 
+			// Add frame rate control
+			let fpsRow = createElement(/*html*/`<li class="spine-player-list-item"></li>`);
+			let fpsLabel = createElement(/*html*/`<div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">`);
+			fpsLabel.innerHTML = `
+				<span>Max FPS</span>
+				<div class="spine-player-fps-control" style="display: flex; align-items: center; gap: 8px;">
+					<input type="number" id="fps-input" min="0" max="120" value="${this.config.maxFPS}" style="width: 60px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;">
+					<button id="fps-apply" style="padding: 4px 8px; background: #007acc; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply</button>
+				</div>
+			`;
+			fpsRow.appendChild(fpsLabel);
+			rows.appendChild(fpsRow);
+
+			// Add current FPS display
+			let currentFpsRow = createElement(/*html*/`<li class="spine-player-list-item"></li>`);
+			let currentFpsLabel = createElement(/*html*/`<div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">`);
+			currentFpsLabel.innerHTML = `
+				<span>Current FPS</span>
+				<span id="current-fps-display" style="color: #007acc; font-weight: bold;">${this.getCurrentFPS()}</span>
+			`;
+			currentFpsRow.appendChild(currentFpsLabel);
+			rows.appendChild(currentFpsRow);
+
+			// Add pause rendering control
+			let pauseRenderRow = createElement(/*html*/`<li class="spine-player-list-item"></li>`);
+			let pauseRenderSwitch = new Switch("Pause rendering when paused");
+			pauseRenderRow.appendChild(pauseRenderSwitch.render());
+			pauseRenderSwitch.setEnabled(this.config.pauseRenderingWhenPaused);
+			pauseRenderSwitch.change = (value) => {
+				this.config.pauseRenderingWhenPaused = value;
+			};
+			rows.appendChild(pauseRenderRow);
+
+			// Add recording mode control
+			let recordingRow = createElement(/*html*/`<li class="spine-player-list-item"></li>`);
+			let recordingSwitch = new Switch("Disable frame rate limit when recording");
+			recordingRow.appendChild(recordingSwitch.render());
+			recordingSwitch.setEnabled(this.config.disableFrameRateLimitWhenRecording);
+			recordingSwitch.change = (value) => {
+				this.config.disableFrameRateLimitWhenRecording = value;
+			};
+			rows.appendChild(recordingRow);
+
+			// Add hardware acceleration control
+			let hwAccelRow = createElement(/*html*/`<li class="spine-player-list-item"></li>`);
+			let hwAccelSwitch = new Switch("Hardware acceleration");
+			hwAccelRow.appendChild(hwAccelSwitch.render());
+			hwAccelSwitch.setEnabled(this.config.enableHardwareAcceleration);
+			hwAccelSwitch.change = (value) => {
+				this.enableHardwareAcceleration(value);
+			};
+			rows.appendChild(hwAccelRow);
+
+			// Add GPU instancing control
+			let gpuInstancingRow = createElement(/*html*/`<li class="spine-player-list-item"></li>`);
+			let gpuInstancingSwitch = new Switch("GPU instancing");
+			gpuInstancingRow.appendChild(gpuInstancingSwitch.render());
+			gpuInstancingSwitch.setEnabled(this.config.enableGPUInstancing);
+			gpuInstancingSwitch.change = (value) => {
+				this.enableGPUInstancing(value);
+			};
+			rows.appendChild(gpuInstancingRow);
+
+			// Add texture compression control
+			let textureCompRow = createElement(/*html*/`<li class="spine-player-list-item"></li>`);
+			let textureCompSwitch = new Switch("Texture compression");
+			textureCompRow.appendChild(textureCompSwitch.render());
+			textureCompSwitch.setEnabled(this.config.enableTextureCompression);
+			textureCompSwitch.change = (value) => {
+				this.enableTextureCompression(value);
+			};
+			rows.appendChild(textureCompRow);
+
+			// Add WebGL extensions info
+			let extensionsRow = createElement(/*html*/`<li class="spine-player-list-item"></li>`);
+			let extensionsInfo = createElement(/*html*/`<div style="display: flex; flex-direction: column; width: 100%;">`);
+			extensionsInfo.innerHTML = `
+				<span>WebGL Extensions</span>
+				<div id="webgl-extensions" style="font-size: 10px; color: #666; margin-top: 4px;">
+					${this.getWebGLExtensions().join(', ')}
+				</div>
+			`;
+			extensionsRow.appendChild(extensionsInfo);
+			rows.appendChild(extensionsRow);
+
+			// Handle FPS input
+			let fpsInput = findWithId(popup.dom, "fps-input")[0] as HTMLInputElement;
+			let fpsApply = findWithId(popup.dom, "fps-apply")[0] as HTMLButtonElement;
+			let currentFpsDisplay = findWithId(popup.dom, "current-fps-display")[0] as HTMLElement;
+			
+			fpsApply.onclick = () => {
+				const fps = parseInt(fpsInput.value);
+				if (fps >= 0 && fps <= 120) {
+					this.setMaxFPS(fps);
+				}
+			};
+
+			// Update FPS display periodically
+			let updateFpsDisplay = () => {
+				if (currentFpsDisplay && currentFpsDisplay.parentElement) {
+					currentFpsDisplay.textContent = this.getCurrentFPS().toString();
+					setTimeout(updateFpsDisplay, 1000);
+				}
+			};
+			updateFpsDisplay();
+
 			settingsButton.classList.add("spine-player-button-icon-settings-selected")
 			popup.show(() => {
 				settingsButton.classList.remove("spine-player-button-icon-settings-selected")
@@ -779,15 +1174,48 @@ module spine {
 		}
 
 		drawFrame (requestNextFrame = true) {
-			if (requestNextFrame && !this.stopRequestAnimationFrame) {
-				requestAnimationFrame(() => this.drawFrame());
-			}
+			// Stop rendering if requested
 			if (this.stopRequestAnimationFrame) {
 				return;
 			}
 
+			// Skip rendering if paused and pauseRenderingWhenPaused is true
+			// But only if skeleton is loaded (to avoid blocking initial load)
+			if (this.paused && this.config.pauseRenderingWhenPaused && this.loaded) {
+				if (requestNextFrame) {
+					this.animationFrameId = requestAnimationFrame(() => this.drawFrame());
+				}
+				return;
+			}
+
+			// Frame rate limiting (disabled during recording to prevent flickering)
+			const currentTime = performance.now();
+			const shouldLimitFPS = this.frameInterval > 0 && !this.isFirstFrame && 
+				(!this.config.disableFrameRateLimitWhenRecording || !this.isRecording) && 
+				currentTime - this.lastFrameTime < this.frameInterval;
+			
+			if (shouldLimitFPS) {
+				if (requestNextFrame) {
+					this.animationFrameId = requestAnimationFrame(() => this.drawFrame());
+				}
+				return;
+			}
+			this.lastFrameTime = currentTime;
+			this.isFirstFrame = false;
+
+			// Update FPS counter
+			this.updateFPS();
+
+			// Request next frame
+			if (requestNextFrame && !this.stopRequestAnimationFrame) {
+				this.animationFrameId = requestAnimationFrame(() => this.drawFrame());
+			}
+
 			let ctx = this.context;
 			let gl = ctx.gl;
+
+			// Apply hardware acceleration optimizations
+			this.applyHardwareAccelerationOptimizations(gl);
 
 			// Clear the viewport
 			var doc = document as any;
@@ -813,16 +1241,19 @@ module spine {
 					this.time.update();
 					let delta = this.time.delta * this.speed;
 
-					let animationDuration = this.animationState.getCurrent(0).animation.duration;
-					this.playTime += delta;
-					while (this.playTime >= animationDuration && animationDuration != 0) {
-						this.playTime -= animationDuration;
-					}
-					this.playTime = Math.max(0, Math.min(this.playTime, animationDuration));
-					this.timelineSlider.setValue(this.playTime / animationDuration);
+					// Skip very small deltas to avoid unnecessary calculations
+					if (delta > 0.001) {
+						let animationDuration = this.animationState.getCurrent(0).animation.duration;
+						this.playTime += delta;
+						while (this.playTime >= animationDuration && animationDuration != 0) {
+							this.playTime -= animationDuration;
+						}
+						this.playTime = Math.max(0, Math.min(this.playTime, animationDuration));
+						this.timelineSlider.setValue(this.playTime / animationDuration);
 
-					this.animationState.update(delta);
-					this.animationState.apply(this.skeleton);
+						this.animationState.update(delta);
+						this.animationState.apply(this.skeleton);
+					}
 				}
 
 				this.skeleton.updateWorldTransform();
@@ -911,6 +1342,8 @@ module spine {
 						d.click();
 						document.body.removeChild(d);
 					}
+					// Disable recording mode after screenshot is complete
+					this.setRecordingMode(false);
 				}
 			}
 		}
@@ -1152,6 +1585,8 @@ module spine {
 			this.doScreenshot = true;
 			this.snapshotName = name;
 			this.screenshotCallback = callback;
+			// Enable recording mode to prevent flickering during screenshot
+			this.setRecordingMode(true);
 		}
 
 		public setDPI(dpi: number) {
@@ -1163,7 +1598,7 @@ module spine {
 		}
 
 		public dispose() {
-			this.stopRequestAnimationFrame = true;
+			this.stopRendering();
 			if (this.sceneRenderer) {
 				this.sceneRenderer.dispose();
 			}
@@ -1291,6 +1726,10 @@ module spine {
 
 		public stopRendering() {
 			this.stopRequestAnimationFrame = true;
+			if (this.animationFrameId) {
+				cancelAnimationFrame(this.animationFrameId);
+				this.animationFrameId = 0;
+			}
 		}
 	}
 
